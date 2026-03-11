@@ -4,22 +4,37 @@ on:
   push:
     branches: ["main"]
     paths:
-      - "FrontendWeb/**"  # Chỉ chạy khi frontend thay đổi
+      - "FrontendWeb/**"
 
 jobs:
-  ftp-deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: FrontendWeb
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Deploy frontend via FTP
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build React app
+        run: npm run build
+
+      - name: Deploy via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
           server: ${{ secrets.FE_FTP_HOST }}
           username: ${{ secrets.FE_FTP_USER }}
           password: ${{ secrets.FE_FTP_PASSWORD }}
-          local-dir: ./FrontendWeb/
+          local-dir: ./FrontendWeb/build/
           server-dir: /nhom7-web-frontend.gt.tc/
           protocol: ftp
