@@ -103,6 +103,7 @@ const ProductGrid = ({ filters, setFilters }) => {
         </div>
       </div>
 
+      {/* Grid layout: 3 products per row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {products.length ? (
           products.slice(0, visibleCount).map((product) => (
