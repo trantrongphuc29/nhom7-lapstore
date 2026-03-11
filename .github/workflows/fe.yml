@@ -22,7 +22,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 18
-          cache: "npm"
+          cache: npm
+          cache-dependency-path: FrontendWeb/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -40,5 +41,5 @@ jobs:
           username: ${{ secrets.FE_FTP_USER }}
           password: ${{ secrets.FE_FTP_PASSWORD }}
           protocol: ftp
-          local-dir: build/
+          local-dir: ./FrontendWeb/build/
           server-dir: /nhom7-web-frontend.gt.tc/
