@@ -1,5 +1,0 @@
-{
-  "buildCommand": "cd FrontendWeb && npm install && npm run build",
-  "outputDirectory": "FrontendWeb/build",
-  "framework": "create-react-app"
-}
