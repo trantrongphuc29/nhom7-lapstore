@@ -4,7 +4,7 @@ import { API_ENDPOINTS, BACKEND_BASE_URL } from '../config/api';
 const Banner = () => {
   const [banners, setBanners] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [setDirection] = useState('next');
+  const [,setDirection] = useState('next');
 
   useEffect(() => {
     fetchBanners();

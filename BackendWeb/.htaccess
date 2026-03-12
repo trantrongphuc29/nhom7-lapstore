@@ -1,14 +1,11 @@
-# Enable URL rewriting
 RewriteEngine On
 
-# Global CORS headers for API responses
 <IfModule mod_headers.c>
-  Header always set Access-Control-Allow-Origin "*"
-  Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
-  Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
-  Header always set Access-Control-Max-Age "86400"
+Header always set Access-Control-Allow-Origin "*"
+Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+Header always set Access-Control-Max-Age "86400"
 </IfModule>
 
-# Short-circuit preflight requests
 RewriteCond %{REQUEST_METHOD} OPTIONS
-RewriteRule ^.*$ - [R=204,L]
+RewriteRule ^(.*)$ $1 [L]
