@@ -12,8 +12,21 @@ const Banner = () => {
 
   const fetchBanners = async () => {
     try {
-      const response = await fetch(API_ENDPOINTS.BANNERS);
+      console.log('Fetching banners from:', API_ENDPOINTS.BANNERS);
+      const response = await fetch(API_ENDPOINTS.BANNERS, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
+      console.log('Banner data received:', data);
+      
       if (data.records && data.records.length > 0) {
         const bannersData = data.records.map(banner => ({
           ...banner,
@@ -25,6 +38,11 @@ const Banner = () => {
       }
     } catch (error) {
       console.error('Error fetching banners:', error);
+      console.error('Error details:', {
+        message: error.message,
+        name: error.name,
+        stack: error.stack
+      });
     }
   };
 
