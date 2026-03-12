@@ -22,12 +22,13 @@ try {
     // Check if ID is provided (for single user)
     if (isset($_GET['id']) && !empty($_GET['id'])) {
         $user->id = $_GET['id'];
-        $user->readOne();
+        $stmt = $user->readOne();
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        if ($user->name != null) {
+        if ($row) {
             $user_arr = array(
-                "id" => $user->id,
-                "name" => $user->name
+                "id" => $row['id'],
+                "name" => $row['name']
             );
             http_response_code(200);
             echo json_encode($user_arr);
