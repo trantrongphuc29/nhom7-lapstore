@@ -26,7 +26,7 @@ const Footer = () => {
             <h3 className="font-bold mb-4">Liên hệ</h3>
             <ul className="space-y-3 text-sm text-slate-500 dark:text-slate-400">
               <li className="flex items-start gap-2">
-                <span>Hotline: 1900 630 670</span>
+                <span>Hotline: 1900 630 660</span>
               </li>
               <li className="flex items-start gap-2">
                 <span>Email: lapstore@gmail.com</span>
