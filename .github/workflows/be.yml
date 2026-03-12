@@ -22,4 +22,4 @@ jobs:
           password: ${{ secrets.BE_FTP_PASSWORD }}
           protocol: ftp
           local-dir: ./BackendWeb/
-          server-dir: /nhom7-web-backend.gt.tc/
+          server-dir: /htdocs/
