@@ -1,6 +1,0 @@
-RewriteEngine On
-
-# Route /users/1 to index.php?id=1
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(\d+)$ index.php?id=$1 [L,QSA]
