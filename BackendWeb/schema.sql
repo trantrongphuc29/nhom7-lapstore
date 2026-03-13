@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS banners (
     id SERIAL PRIMARY KEY,
     title VARCHAR(255),
-    image VARCHAR(500) NOT NULL,
+    image_url VARCHAR(500) NOT NULL,
     link VARCHAR(500),
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- Insert sample banners
-INSERT INTO banners (title, image_url, is_active) VALUES
+INSERT INTO banners (title, image, is_active) VALUES
 ('Banner Khuyến Mãi', 'images/banners/banner1.jpg', true),
 ('Banner Bảo hành', 'images/banners/banner2.jpg', true)
 ON CONFLICT DO NOTHING;

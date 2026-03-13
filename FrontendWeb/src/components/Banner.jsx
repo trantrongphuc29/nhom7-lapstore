@@ -17,9 +17,9 @@ const Banner = () => {
       if (data.records && data.records.length > 0) {
         const bannersData = data.records.map(banner => ({
           ...banner,
-          image_url: banner.image_url.startsWith('http') 
-            ? banner.image_url 
-            : `${BACKEND_BASE_URL}/${banner.image_url}`
+          image: banner.image.startsWith('http') 
+            ? banner.image 
+            : `${BACKEND_BASE_URL}/${banner.image}`
         }));
         setBanners(bannersData);
       }
@@ -47,7 +47,7 @@ const Banner = () => {
           {banners.map((banner, index) => (
             <img
               key={banner.id}
-              src={banner.image_url}
+              src={banner.image}
               alt={banner.title || 'Banner'}
               className={`absolute inset-0 w-full h-full object-cover transition-all duration-500 ${
                 index === currentIndex
