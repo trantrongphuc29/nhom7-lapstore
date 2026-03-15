@@ -82,7 +82,7 @@ const ProductGrid = ({ filters, setFilters }) => {
     <section className="flex-1">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 bg-white dark:bg-background-dark p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
         <p className="text-sm">
-          <span className="font-bold text-primary border">{products.length}</span> sản phẩm
+          <span className="font-bold text-primary">{products.length}</span> sản phẩm
         </p>
         <div className="flex items-center gap-2 overflow-x-auto">
           <span className="text-sm text-slate-500 whitespace-nowrap">Sắp xếp:</span>
