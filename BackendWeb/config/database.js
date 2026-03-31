@@ -104,11 +104,10 @@ async function runQuery(client, rawSql, params = []) {
 }
 
 const pool = new Pool({
-  connectionString: buildConnectionString(),
+  connectionString: process.env.DATABASE_URL,
   ssl: {
     rejectUnauthorized: false
-  },
-  max: 10,
+  }
 });
 
 pool
