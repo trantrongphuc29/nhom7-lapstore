@@ -117,13 +117,13 @@ async function runQuery(client, rawSql, params = []) {
   }
 }
 
-const isProduction = process.env.NODE_ENV === "production";
-const connectionString = sanitizeConnectionString(buildConnectionString());
+const useSSL = connectionString.includes("render.com") || connectionString.includes("dpg-");
 
 const pool = new Pool({
   connectionString,
-  ssl: isProduction ? { rejectUnauthorized: false } : false,
-  max: 10,
+  ssl: useSSL
+    ? { rejectUnauthorized: false }
+    : false,
 });
 
 pool
