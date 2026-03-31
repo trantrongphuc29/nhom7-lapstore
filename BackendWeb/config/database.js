@@ -105,7 +105,9 @@ async function runQuery(client, rawSql, params = []) {
 
 const pool = new Pool({
   connectionString: buildConnectionString(),
-  ssl: process.env.NODE_ENV === "production" ? { require: true, rejectUnauthorized: false } : false,
+  ssl: {
+    rejectUnauthorized: false
+  },
   max: 10,
 });
 
