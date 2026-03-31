@@ -1,0 +1,133 @@
+const pool = require("../config/database");
+
+class UserAddress {
+  static async ensureTable() {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS user_addresses (
+        id INT NOT NULL AUTO_INCREMENT,
+        user_id INT NOT NULL,
+        recipient_name VARCHAR(150) NOT NULL,
+        phone VARCHAR(30) NOT NULL,
+        line1 VARCHAR(255) NOT NULL,
+        line2 VARCHAR(255) NULL,
+        ward VARCHAR(120) NULL,
+        district VARCHAR(120) NULL,
+        province VARCHAR(120) NULL,
+        is_default TINYINT(1) NOT NULL DEFAULT 0,
+        created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY idx_user_addresses_user (user_id),
+        KEY idx_user_addresses_default (user_id, is_default)
+      )
+    `);
+  }
+
+  static async listByUserId(userId) {
+    await this.ensureTable();
+    const [rows] = await pool.query(
+      `SELECT id, user_id AS userId, recipient_name AS recipientName, phone, line1, line2,
+              ward, district, province, is_default AS isDefault, created_at AS createdAt, updated_at AS updatedAt
+       FROM user_addresses WHERE user_id = ? ORDER BY is_default DESC, id DESC`,
+      [userId]
+    );
+    return rows;
+  }
+
+  static async findByIdForUser(id, userId) {
+    await this.ensureTable();
+    const [rows] = await pool.query(
+      `SELECT id, user_id AS userId, recipient_name AS recipientName, phone, line1, line2,
+              ward, district, province, is_default AS isDefault
+       FROM user_addresses WHERE id = ? AND user_id = ? LIMIT 1`,
+      [id, userId]
+    );
+    return rows[0] || null;
+  }
+
+  static async create(userId, payload) {
+    await this.ensureTable();
+    const {
+      recipientName,
+      phone,
+      line1,
+      line2,
+      ward,
+      district,
+      province,
+      isDefault,
+    } = payload;
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      if (isDefault) {
+        await conn.query("UPDATE user_addresses SET is_default = 0 WHERE user_id = ?", [userId]);
+      }
+      const [res] = await conn.query(
+        `INSERT INTO user_addresses
+         (user_id, recipient_name, phone, line1, line2, ward, district, province, is_default)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          userId,
+          recipientName,
+          phone,
+          line1,
+          line2 || null,
+          ward || null,
+          district || null,
+          province || null,
+          isDefault ? 1 : 0,
+        ]
+      );
+      await conn.commit();
+      return this.findByIdForUser(res.insertId, userId);
+    } catch (e) {
+      await conn.rollback();
+      throw e;
+    } finally {
+      conn.release();
+    }
+  }
+
+  static async update(id, userId, payload) {
+    await this.ensureTable();
+    const row = await this.findByIdForUser(id, userId);
+    if (!row) return null;
+    const recipientName = payload.recipientName !== undefined ? payload.recipientName : row.recipientName;
+    const phone = payload.phone !== undefined ? payload.phone : row.phone;
+    const line1 = payload.line1 !== undefined ? payload.line1 : row.line1;
+    const line2 = payload.line2 !== undefined ? payload.line2 : row.line2;
+    const ward = payload.ward !== undefined ? payload.ward : row.ward;
+    const district = payload.district !== undefined ? payload.district : row.district;
+    const province = payload.province !== undefined ? payload.province : row.province;
+    const isDefault = payload.isDefault !== undefined ? Boolean(payload.isDefault) : Boolean(row.isDefault);
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      if (isDefault) {
+        await conn.query("UPDATE user_addresses SET is_default = 0 WHERE user_id = ?", [userId]);
+      }
+      await conn.query(
+        `UPDATE user_addresses SET
+           recipient_name = ?, phone = ?, line1 = ?, line2 = ?, ward = ?, district = ?, province = ?, is_default = ?
+         WHERE id = ? AND user_id = ?`,
+        [recipientName, phone, line1, line2 || null, ward || null, district || null, province || null, isDefault ? 1 : 0, id, userId]
+      );
+      await conn.commit();
+      return this.findByIdForUser(id, userId);
+    } catch (e) {
+      await conn.rollback();
+      throw e;
+    } finally {
+      conn.release();
+    }
+  }
+
+  static async delete(id, userId) {
+    await this.ensureTable();
+    const [res] = await pool.query("DELETE FROM user_addresses WHERE id = ? AND user_id = ?", [id, userId]);
+    return res.affectedRows > 0;
+  }
+}
+
+module.exports = UserAddress;
