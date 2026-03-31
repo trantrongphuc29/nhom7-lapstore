@@ -10,6 +10,20 @@ function buildConnectionString() {
   return `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${db}`;
 }
 
+function sanitizeConnectionString(rawUrl) {
+  const value = String(rawUrl || "").trim();
+  if (!value) return value;
+  try {
+    const parsed = new URL(value);
+    // Let pg client ssl option control TLS behavior.
+    parsed.searchParams.delete("sslmode");
+    parsed.searchParams.delete("uselibpqcompat");
+    return parsed.toString();
+  } catch (_) {
+    return value;
+  }
+}
+
 function normalizeSql(sql) {
   let out = String(sql || "");
   out = out.replace(/`([^`]+)`/g, "\"$1\"");
@@ -103,11 +117,13 @@ async function runQuery(client, rawSql, params = []) {
   }
 }
 
+const isProduction = process.env.NODE_ENV === "production";
+const connectionString = sanitizeConnectionString(buildConnectionString());
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
+  connectionString,
+  ssl: isProduction ? { rejectUnauthorized: false } : false,
+  max: 10,
 });
 
 pool
