@@ -117,20 +117,38 @@ async function runQuery(client, rawSql, params = []) {
   }
 }
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
+// Handle SSL configuration for Render and other production environments
+const getPoolConfig = () => {
+  const config = {
+    connectionString: process.env.DATABASE_URL,
+  };
+
+  if (process.env.NODE_ENV === 'production') {
+    // For Render and production environments
+    config.ssl = {
+      rejectUnauthorized: false,
+    };
+    // Add uselibpqcompat parameter to handle SSL mode properly
+    if (config.connectionString && !config.connectionString.includes('sslmode')) {
+      config.connectionString += '?sslmode=require';
+    }
   }
-});
+
+  return config;
+};
+
+const pool = new Pool(getPoolConfig());
 
 pool
   .connect()
   .then((client) => {
-    console.log("Connected to PostgreSQL database");
+    console.log("Connected to PostgreSQL database successfully");
     client.release();
   })
-  .catch((err) => console.error("Database connection error:", err));
+  .catch((err) => {
+    console.error("Database connection error:", err);
+    process.exit(1);
+  });
 
 pool.__nativeQuery = pool.query.bind(pool);
 pool.query = async (sql, params = []) => runQuery(pool, sql, params);
