@@ -119,19 +119,29 @@ async function runQuery(client, rawSql, params = []) {
 
 // Handle SSL configuration for Render and other production environments
 const getPoolConfig = () => {
-  const config = {
-    connectionString: process.env.DATABASE_URL,
-  };
+  let connectionString = process.env.DATABASE_URL;
+  const config = {};
 
   if (process.env.NODE_ENV === 'production') {
-    // For Render and production environments
+    // For Render and production environments with libpq compatibility
+    // Using uselibpqcompat=true for forward compatibility with pg v9.0.0
+    if (connectionString) {
+      // Add libpq compatibility and SSL mode parameters if not already present
+      if (!connectionString.includes('sslmode') && !connectionString.includes('uselibpqcompat')) {
+        connectionString += '?uselibpqcompat=true&sslmode=require';
+      } else if (!connectionString.includes('uselibpqcompat')) {
+        connectionString += connectionString.includes('?') ? '&uselibpqcompat=true' : '?uselibpqcompat=true';
+      }
+    }
+    
+    config.connectionString = connectionString;
     config.ssl = {
       rejectUnauthorized: false,
     };
-    // Add uselibpqcompat parameter to handle SSL mode properly
-    if (config.connectionString && !config.connectionString.includes('sslmode')) {
-      config.connectionString += '?sslmode=require';
-    }
+  } else {
+    // Development environment
+    config.connectionString = connectionString;
+    config.ssl = false;
   }
 
   return config;
