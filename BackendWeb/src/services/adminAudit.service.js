@@ -1,5 +1,10 @@
 const pool = require("../../config/database");
 
+function isPgSchemaError(error) {
+  const code = String(error?.code || "");
+  return code === "42P01" || code === "42703";
+}
+
 async function createAuditLog({ userId = null, module, action, targetType = null, targetId = null, metadata = null }) {
   try {
     await pool.query(
@@ -41,18 +46,26 @@ async function getAuditLogs(query) {
     const kw = `%${search}%`;
     values.push(kw, kw, kw, kw, kw);
   }
-  const [countRows] = await pool.query(`SELECT COUNT(*) AS total FROM admin_audit_logs l ${where}`, values);
-  const [rows] = await pool.query(
-    `
-      SELECT l.id, l.user_id AS userId, u.email AS userEmail, l.module, l.action, l.target_type AS targetType, l.target_id AS targetId, l.metadata, l.created_at AS createdAt
-      FROM admin_audit_logs l
-      LEFT JOIN users u ON u.id = l.user_id
-      ${where}
-      ORDER BY l.id DESC
-      LIMIT ? OFFSET ?
-    `,
-    [...values, limit, offset]
-  );
+  let countRows;
+  let rows;
+  try {
+    [countRows] = await pool.query(`SELECT COUNT(*) AS total FROM admin_audit_logs l ${where}`, values);
+    [rows] = await pool.query(
+      `
+        SELECT l.id, l.user_id AS userId, u.email AS userEmail, l.module, l.action, l.target_type AS targetType, l.target_id AS targetId, l.metadata, l.created_at AS createdAt
+        FROM admin_audit_logs l
+        LEFT JOIN users u ON u.id = l.user_id
+        ${where}
+        ORDER BY l.id DESC
+        LIMIT ? OFFSET ?
+      `,
+      [...values, limit, offset]
+    );
+  } catch (error) {
+    if (!isPgSchemaError(error)) throw error;
+    countRows = [{ total: 0 }];
+    rows = [];
+  }
   return {
     records: rows.map((r) => {
       let parsed = null;

@@ -102,7 +102,7 @@ async function redeemVoucher(rawCode, subtotal) {
     UPDATE vouchers
     SET used_count = used_count + 1
     WHERE code = ?
-      AND is_active = 1
+      AND COALESCE(is_active::int, 0) = 1
       AND (usage_limit = 0 OR used_count < usage_limit)
       AND (starts_at IS NULL OR starts_at <= NOW())
       AND (ends_at IS NULL OR ends_at >= NOW())

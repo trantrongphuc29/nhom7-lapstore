@@ -3,6 +3,21 @@ const AppError = require("../utils/AppError");
 const { createAuditLog } = require("./adminAudit.service");
 const { normalizeCode: normalizeVoucherCode } = require("./vouchers.service");
 
+function isPgSchemaError(error) {
+  const code = String(error?.code || "");
+  return code === "42P01" || code === "42703";
+}
+
+async function safeQuery(query, params = [], fallback = []) {
+  try {
+    const [rows] = await pool.query(query, params);
+    return rows;
+  } catch (error) {
+    if (isPgSchemaError(error)) return fallback;
+    throw error;
+  }
+}
+
 function normalizeVoucherPayload(payload) {
   const code = normalizeVoucherCode(payload.code);
   if (!code || !payload.discountType || payload.discountValue == null) {
@@ -36,13 +51,15 @@ function normalizeVoucherPayload(payload) {
 }
 
 async function getPromotionsOverview() {
-  const [vouchers] = await pool.query(
+  const vouchers = await safeQuery(
     `
       SELECT id, code, discount_type AS discountType, discount_value AS discountValue, min_order_value AS minOrderValue, usage_limit AS usageLimit, used_count AS usedCount, starts_at AS startsAt, ends_at AS endsAt, is_active AS isActive
       FROM vouchers
       ORDER BY id DESC
       LIMIT 100
-    `
+    `,
+    [],
+    []
   );
   return { vouchers };
 }
