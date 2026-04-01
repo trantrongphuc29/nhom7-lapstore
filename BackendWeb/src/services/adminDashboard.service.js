@@ -5,7 +5,9 @@ async function safeQuery(query, params = [], fallback = []) {
     const [rows] = await pool.query(query, params);
     return rows;
   } catch (error) {
-    if (error?.code === "ER_NO_SUCH_TABLE") return fallback;
+    const code = String(error?.code || "");
+    // MySQL: ER_NO_SUCH_TABLE, PostgreSQL: 42P01 (undefined_table)
+    if (code === "ER_NO_SUCH_TABLE" || code === "42P01") return fallback;
     throw error;
   }
 }
@@ -37,7 +39,9 @@ async function getKpis() {
     );
     lowStock = row;
   } catch (error) {
-    if (error?.code === "ER_BAD_FIELD_ERROR") {
+    const code = String(error?.code || "");
+    // MySQL: ER_BAD_FIELD_ERROR, PostgreSQL: 42703 (undefined_column)
+    if (code === "ER_BAD_FIELD_ERROR" || code === "42703") {
       const [fallback = { value: 0 }] = await safeQuery(
         `
           SELECT COUNT(*) AS value

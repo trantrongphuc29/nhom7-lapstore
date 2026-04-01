@@ -32,26 +32,46 @@ function buildRevenuePeriodFilter(query = {}) {
     const m = Number(query.month);
     if (Number.isInteger(y) && Number.isInteger(m) && m >= 1 && m <= 12) {
       values.push(y, m);
-      return { sql: " AND YEAR(o.created_at) = ? AND MONTH(o.created_at) = ? ", values, label: `Tháng ${m}/${y}` };
+      return {
+        sql: " AND EXTRACT(YEAR FROM o.created_at) = ? AND EXTRACT(MONTH FROM o.created_at) = ? ",
+        values,
+        label: `Tháng ${m}/${y}`,
+      };
     }
-    return { sql: " AND YEAR(o.created_at) = YEAR(CURDATE()) AND MONTH(o.created_at) = MONTH(CURDATE()) ", values, label: "Tháng hiện tại" };
+    return {
+      sql: " AND EXTRACT(YEAR FROM o.created_at) = EXTRACT(YEAR FROM CURRENT_DATE) AND EXTRACT(MONTH FROM o.created_at) = EXTRACT(MONTH FROM CURRENT_DATE) ",
+      values,
+      label: "Tháng hiện tại",
+    };
   }
   if (periodType === "quarter") {
     const y = Number(query.year);
     const q = Number(query.quarter);
     if (Number.isInteger(y) && Number.isInteger(q) && q >= 1 && q <= 4) {
       values.push(y, q);
-      return { sql: " AND YEAR(o.created_at) = ? AND QUARTER(o.created_at) = ? ", values, label: `Quý ${q}/${y}` };
+      return {
+        sql: " AND EXTRACT(YEAR FROM o.created_at) = ? AND EXTRACT(QUARTER FROM o.created_at) = ? ",
+        values,
+        label: `Quý ${q}/${y}`,
+      };
     }
-    return { sql: " AND YEAR(o.created_at) = YEAR(CURDATE()) AND QUARTER(o.created_at) = QUARTER(CURDATE()) ", values, label: "Quý hiện tại" };
+    return {
+      sql: " AND EXTRACT(YEAR FROM o.created_at) = EXTRACT(YEAR FROM CURRENT_DATE) AND EXTRACT(QUARTER FROM o.created_at) = EXTRACT(QUARTER FROM CURRENT_DATE) ",
+      values,
+      label: "Quý hiện tại",
+    };
   }
   if (periodType === "year") {
     const y = Number(query.year);
     if (Number.isInteger(y)) {
       values.push(y);
-      return { sql: " AND YEAR(o.created_at) = ? ", values, label: `Năm ${y}` };
+      return { sql: " AND EXTRACT(YEAR FROM o.created_at) = ? ", values, label: `Năm ${y}` };
     }
-    return { sql: " AND YEAR(o.created_at) = YEAR(CURDATE()) ", values, label: "Năm hiện tại" };
+    return {
+      sql: " AND EXTRACT(YEAR FROM o.created_at) = EXTRACT(YEAR FROM CURRENT_DATE) ",
+      values,
+      label: "Năm hiện tại",
+    };
   }
   if (periodType === "custom") {
     const from = String(query.from || "").trim();

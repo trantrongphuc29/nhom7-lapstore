@@ -7,7 +7,8 @@ async function safeQuery(query, params = [], fallback = []) {
     const [rows] = await pool.query(query, params);
     return rows;
   } catch (error) {
-    if (error?.code === "ER_NO_SUCH_TABLE") return fallback;
+    const code = String(error?.code || "");
+    if (code === "ER_NO_SUCH_TABLE" || code === "42P01") return fallback;
     throw error;
   }
 }

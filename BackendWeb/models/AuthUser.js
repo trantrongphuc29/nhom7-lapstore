@@ -47,7 +47,8 @@ class AuthUser {
     try {
       await pool.query(`UPDATE users SET full_name = ?, phone = ? WHERE id = ?`, [nextFull, nextPhone, id]);
     } catch (error) {
-      if (error?.code !== "ER_BAD_FIELD_ERROR") throw error;
+      const code = String(error?.code || "");
+      if (code !== "ER_BAD_FIELD_ERROR" && code !== "42703") throw error;
       // Schema tối giản không có full_name/phone: bỏ qua để không làm hỏng luồng auth.
     }
     return this.findPublicById(id);
