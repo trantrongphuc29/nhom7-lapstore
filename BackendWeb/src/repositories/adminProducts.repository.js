@@ -66,7 +66,7 @@ async function queryAdminProductsList({ filters, sortBy, sortDir, limit, offset 
           END
         ) AS min_variant_price,
         COALESCE(SUM(pv.stock), 0) AS stock,
-        STRING_AGG(DISTINCT NULLIF(TRIM(pv.sku), ''), ', ' ORDER BY pv.id) AS variant_skus
+        STRING_AGG(DISTINCT NULLIF(TRIM(pv.sku), ''), ', ' ORDER BY pv.sku) AS variant_skus
       FROM products p
       LEFT JOIN product_admin_meta pam ON pam.product_id = p.id
       LEFT JOIN product_variants pv ON pv.product_id = p.id

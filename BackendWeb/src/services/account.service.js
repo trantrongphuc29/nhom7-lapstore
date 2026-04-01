@@ -167,7 +167,7 @@ async function listOrders(userId) {
         )
       ) AS image,
       (
-        SELECT STRING_AGG(oi.product_name, ' | ' ORDER BY oi.id)
+        SELECT STRING_AGG(oi.product_name, ' | ')
         FROM order_items oi
         WHERE oi.order_id = o.id
       ) AS productNames
