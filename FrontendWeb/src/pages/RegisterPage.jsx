@@ -17,7 +17,7 @@ function RegisterPage() {
 
   const passwordError = useMemo(() => {
     if (!form.password) return 'Mật khẩu là bắt buộc';
-    if (form.password.length < 3) return 'Mật khẩu tối thiểu 3 ký tự';
+    if (form.password.length < 6) return 'Mật khẩu tối thiểu 6 ký tự';
     return '';
   }, [form.password]);
 
