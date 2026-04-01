@@ -2,6 +2,11 @@ const pool = require("../../config/database");
 const AppError = require("../utils/AppError");
 const { createAuditLog } = require("./adminAudit.service");
 
+function isPgSchemaError(error) {
+  const code = String(error?.code || "");
+  return code === "42P01" || code === "42703";
+}
+
 async function getAdminCustomers(query) {
   const page = Math.max(1, Number(query.page) || 1);
   const limit = Math.min(100, Math.max(5, Number(query.limit) || 10));
@@ -19,35 +24,61 @@ async function getAdminCustomers(query) {
     const keyword = `%${search}%`;
     values.push(keyword, keyword, keyword);
   }
-  const [[count]] = await pool.query(
-    `
-      SELECT COUNT(*) AS total
-      FROM users u
-      LEFT JOIN customers c ON c.user_id = u.id
-      ${where}
-    `,
-    values
-  );
-  const [rows] = await pool.query(
-    `
-      SELECT
-        u.id,
-        COALESCE(c.full_name, SPLIT_PART(u.email, '@', 1)) AS fullName,
-        u.email,
-        c.phone,
-        COALESCE(c.status, 'active') AS status,
-        COALESCE(c.customer_group, 'retail') AS customerGroup,
-        COALESCE(c.loyalty_points, 0) AS loyaltyPoints,
-        COALESCE(c.total_spent, 0) AS totalSpent,
-        COALESCE(c.created_at, u.created_at) AS createdAt
-      FROM users u
-      LEFT JOIN customers c ON c.user_id = u.id
-      ${where}
-      ORDER BY u.id DESC
-      LIMIT ? OFFSET ?
-    `,
-    [...values, limit, offset]
-  );
+  let count;
+  let rows;
+  try {
+    [[count]] = await pool.query(
+      `
+        SELECT COUNT(*) AS total
+        FROM users u
+        LEFT JOIN customers c ON c.user_id = u.id
+        ${where}
+      `,
+      values
+    );
+    [rows] = await pool.query(
+      `
+        SELECT
+          u.id,
+          COALESCE(c.full_name, SPLIT_PART(u.email, '@', 1)) AS fullName,
+          u.email,
+          c.phone,
+          COALESCE(c.status, 'active') AS status,
+          COALESCE(c.customer_group, 'retail') AS customerGroup,
+          COALESCE(c.loyalty_points, 0) AS loyaltyPoints,
+          COALESCE(c.total_spent, 0) AS totalSpent,
+          COALESCE(c.created_at, u.created_at) AS createdAt
+        FROM users u
+        LEFT JOIN customers c ON c.user_id = u.id
+        ${where}
+        ORDER BY u.id DESC
+        LIMIT ? OFFSET ?
+      `,
+      [...values, limit, offset]
+    );
+  } catch (error) {
+    if (!isPgSchemaError(error)) throw error;
+    const [{ total = 0 } = {}] = await pool.query(`SELECT COUNT(*) AS total FROM users`);
+    count = { total };
+    [rows] = await pool.query(
+      `
+        SELECT
+          u.id,
+          SPLIT_PART(u.email, '@', 1) AS fullName,
+          u.email,
+          NULL AS phone,
+          'active' AS status,
+          'retail' AS customerGroup,
+          0 AS loyaltyPoints,
+          0 AS totalSpent,
+          u.created_at AS createdAt
+        FROM users u
+        ORDER BY u.id DESC
+        LIMIT ? OFFSET ?
+      `,
+      [limit, offset]
+    );
+  }
   return {
     records: rows.map((r) => ({ ...r, totalSpent: Number(r.totalSpent || 0), loyaltyPoints: Number(r.loyaltyPoints || 0) })),
     pagination: {
@@ -62,25 +93,48 @@ async function getAdminCustomers(query) {
 async function getAdminCustomerById(id) {
   const userId = Number(id);
   if (!Number.isInteger(userId) || userId <= 0) throw new AppError("Invalid customer id", 400, "VALIDATION_ERROR");
-  const [[customer]] = await pool.query(
-    `
-      SELECT
-        u.id,
-        COALESCE(c.full_name, SPLIT_PART(u.email, '@', 1)) AS fullName,
-        u.email,
-        c.phone,
-        COALESCE(c.status, 'active') AS status,
-        COALESCE(c.customer_group, 'retail') AS customerGroup,
-        COALESCE(c.loyalty_points, 0) AS loyaltyPoints,
-        COALESCE(c.total_spent, 0) AS totalSpent,
-        COALESCE(c.created_at, u.created_at) AS createdAt
-      FROM users u
-      LEFT JOIN customers c ON c.user_id = u.id
-      WHERE u.id = ?
-      LIMIT 1
-    `,
-    [userId]
-  );
+  let customer;
+  try {
+    [[customer]] = await pool.query(
+      `
+        SELECT
+          u.id,
+          COALESCE(c.full_name, SPLIT_PART(u.email, '@', 1)) AS fullName,
+          u.email,
+          c.phone,
+          COALESCE(c.status, 'active') AS status,
+          COALESCE(c.customer_group, 'retail') AS customerGroup,
+          COALESCE(c.loyalty_points, 0) AS loyaltyPoints,
+          COALESCE(c.total_spent, 0) AS totalSpent,
+          COALESCE(c.created_at, u.created_at) AS createdAt
+        FROM users u
+        LEFT JOIN customers c ON c.user_id = u.id
+        WHERE u.id = ?
+        LIMIT 1
+      `,
+      [userId]
+    );
+  } catch (error) {
+    if (!isPgSchemaError(error)) throw error;
+    [[customer]] = await pool.query(
+      `
+        SELECT
+          u.id,
+          SPLIT_PART(u.email, '@', 1) AS fullName,
+          u.email,
+          NULL AS phone,
+          'active' AS status,
+          'retail' AS customerGroup,
+          0 AS loyaltyPoints,
+          0 AS totalSpent,
+          u.created_at AS createdAt
+        FROM users u
+        WHERE u.id = ?
+        LIMIT 1
+      `,
+      [userId]
+    );
+  }
   if (!customer) throw new AppError("Customer not found", 404, "NOT_FOUND");
   const [recentOrders] = await pool.query(
     `
