@@ -33,11 +33,11 @@ function normalizeSql(sql) {
   out = out.replace(/DATE_SUB\s*\(\s*CURRENT_DATE\s*,\s*INTERVAL\s+(\d+)\s+DAY\s*\)/gi, "CURRENT_DATE - INTERVAL '$1 DAY'");
   out = out.replace(
     /GROUP_CONCAT\s*\(\s*DISTINCT\s+(.+?)\s+ORDER\s+BY\s+.+?\s+SEPARATOR\s+'([^']*)'\s*\)/gis,
-    "STRING_AGG(DISTINCT $1::text, '$2')"
+    "STRING_AGG($1::text, '$2')"
   );
   out = out.replace(
     /GROUP_CONCAT\s*\(\s*DISTINCT\s+(.+?)\s+SEPARATOR\s+'([^']*)'\s*\)/gis,
-    "STRING_AGG(DISTINCT $1::text, '$2')"
+    "STRING_AGG($1::text, '$2')"
   );
   out = out.replace(
     /INSERT INTO\s+app_settings\s*\(\s*["`]?key["`]?\s*,\s*["`]?value["`]?\s*\)\s*VALUES\s*\(\s*'pricing'\s*,\s*CAST\(\?\s+AS\s+JSON\)\s*\)\s*ON DUPLICATE KEY UPDATE\s+["`]?value["`]?\s*=\s*CAST\(\?\s+AS\s+JSON\)/i,
