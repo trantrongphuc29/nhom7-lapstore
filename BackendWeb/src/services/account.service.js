@@ -167,7 +167,7 @@ async function listOrders(userId) {
         )
       ) AS image,
       (
-        SELECT GROUP_CONCAT(oi.product_name ORDER BY oi.id ASC SEPARATOR ' | ')
+        SELECT STRING_AGG(oi.product_name, ' | ' ORDER BY oi.id)
         FROM order_items oi
         WHERE oi.order_id = o.id
       ) AS productNames

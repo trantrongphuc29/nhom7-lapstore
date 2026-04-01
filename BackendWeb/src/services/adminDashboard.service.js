@@ -70,9 +70,9 @@ async function getRevenueSeries(days = 7) {
   const span = Math.max(1, Number(days) || 7);
   const rows = await safeQuery(
     `
-      SELECT DATE_FORMAT(DATE(created_at), '%d/%m') AS day, COALESCE(SUM(total_amount), 0) AS revenue
+      SELECT TO_CHAR(DATE(created_at), 'DD/MM') AS day, COALESCE(SUM(total_amount), 0) AS revenue
       FROM orders
-      WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+      WHERE created_at >= CURRENT_DATE - (? * INTERVAL '1 DAY')
         AND status IN ('accepted', 'delivered')
       GROUP BY DATE(created_at)
       ORDER BY DATE(created_at) ASC
