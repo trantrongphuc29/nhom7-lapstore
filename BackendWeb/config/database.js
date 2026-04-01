@@ -24,6 +24,14 @@ function sanitizeConnectionString(rawUrl) {
   }
 }
 
+/** PostgreSQL folds unquoted identifiers to lowercase, breaking camelCase keys node-pg returns (e.g. discountType → discounttype). Quote camelCase SELECT aliases only. */
+function quoteCamelCaseSelectAliases(sql) {
+  return String(sql || "").replace(
+    /\bAS\s+([a-z][a-z0-9]*(?:[A-Z][a-z0-9]*)+)\b/g,
+    (match, alias) => `AS "${alias}"`
+  );
+}
+
 function normalizeSql(sql) {
   let out = String(sql || "");
   out = out.replace(/`([^`]+)`/g, "\"$1\"");
@@ -43,6 +51,7 @@ function normalizeSql(sql) {
     /INSERT INTO\s+app_settings\s*\(\s*["`]?key["`]?\s*,\s*["`]?value["`]?\s*\)\s*VALUES\s*\(\s*'pricing'\s*,\s*CAST\(\?\s+AS\s+JSON\)\s*\)\s*ON DUPLICATE KEY UPDATE\s+["`]?value["`]?\s*=\s*CAST\(\?\s+AS\s+JSON\)/i,
     "INSERT INTO app_settings (\"key\", \"value\") VALUES ('pricing', CAST(? AS JSONB)) ON CONFLICT (\"key\") DO UPDATE SET \"value\" = EXCLUDED.\"value\""
   );
+  out = quoteCamelCaseSelectAliases(out);
   return out;
 }
 
