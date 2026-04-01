@@ -87,7 +87,11 @@ async function previewVoucher(rawCode, subtotal) {
   };
 }
 
-async function redeemVoucher(rawCode, subtotal) {
+/**
+ * @param {function} [queryFn] Dùng cùng kết nối transaction (vd. conn.query), mặc định pool.query
+ */
+async function redeemVoucher(rawCode, subtotal, queryFn) {
+  const run = typeof queryFn === "function" ? queryFn : (sql, params) => pool.query(sql, params);
   const c = normalizeCode(rawCode);
   if (!c) throw new AppError("Vui lòng nhập mã voucher.", 400, "VALIDATION_ERROR");
   const sub = Number(subtotal);
@@ -97,7 +101,7 @@ async function redeemVoucher(rawCode, subtotal) {
   const row = await getVoucherRowByCode(c);
   const discountAmount = assertRowApplicable(row, sub);
 
-  const [result] = await pool.query(
+  const [result] = await run(
     `
     UPDATE vouchers
     SET used_count = used_count + 1

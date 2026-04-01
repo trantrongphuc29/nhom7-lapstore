@@ -8,15 +8,21 @@ const DEFAULT_SHIPPING_FEE = 50_000;
 const PICKUP_STORES = [
   { id: "hcm-q1", label: "LAPSTORE Quận 1 — 123 Nguyễn Huệ, Q.1, TP.HCM" }
 ];
-let cachedHasOrdersUserIdColumn = null;
+const { ordersTableHasUserIdColumn } = require("../utils/ordersSchema.util");
 
 function storeLabel(id) {
   return PICKUP_STORES.find((s) => s.id === id)?.label ?? id ?? "";
 }
 
+/** Khớp CHECK payment_method trên PostgreSQL: cod | bank_transfer | card | e_wallet */
 function mapPaymentMethod(raw) {
-  const m = String(raw || "").toLowerCase();
-  if (m === "bank" || m === "bank_transfer") return "bank_transfer";
+  const m = String(raw || "")
+    .toLowerCase()
+    .trim()
+    .replace(/-/g, "_");
+  if (m === "bank" || m === "bank_transfer" || m === "transfer") return "bank_transfer";
+  if (m === "card" || m === "credit" || m === "debit") return "card";
+  if (m === "e_wallet" || m === "ewallet" || m === "momo" || m === "zalopay" || m === "vnpay") return "e_wallet";
   return "cod";
 }
 
@@ -24,22 +30,6 @@ function truncate(s, max) {
   const str = String(s || "");
   if (str.length <= max) return str;
   return `${str.slice(0, max - 1)}…`;
-}
-
-async function hasOrdersUserIdColumn() {
-  if (cachedHasOrdersUserIdColumn != null) return cachedHasOrdersUserIdColumn;
-  const [rows] = await pool.query(
-    `
-      SELECT 1
-      FROM information_schema.COLUMNS
-      WHERE TABLE_SCHEMA = DATABASE()
-        AND TABLE_NAME = 'orders'
-        AND COLUMN_NAME = 'user_id'
-      LIMIT 1
-    `
-  );
-  cachedHasOrdersUserIdColumn = rows.length > 0;
-  return cachedHasOrdersUserIdColumn;
 }
 
 /** @param {object} shipping Frontend checkoutFlow shape */
@@ -104,7 +94,7 @@ async function createStorefrontOrder(body, authUser) {
 
   const rawUid = !authUser ? null : Number(authUser.sub);
   const uid = Number.isInteger(rawUid) && rawUid > 0 ? rawUid : null;
-  const canWriteOrderUserId = await hasOrdersUserIdColumn();
+  const canWriteOrderUserId = await ordersTableHasUserIdColumn(pool);
 
   let customerEmail = null;
   let customerId = null;
@@ -183,9 +173,23 @@ async function createStorefrontOrder(body, authUser) {
 
   const orderCode = await generateOrderCode();
 
-  const [ins] = canWriteOrderUserId
-    ? await pool.query(
-        `
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    for (const l of lines) {
+      const [stockRes] = await conn.query(
+        `UPDATE product_variants SET stock = stock - ? WHERE id = ? AND stock >= ?`,
+        [l.quantity, l.variantId, l.quantity]
+      );
+      if (!stockRes || Number(stockRes.affectedRows || 0) !== 1) {
+        throw new AppError(`Không đủ hàng: ${l.productName}`, 400, "OUT_OF_STOCK");
+      }
+    }
+
+    const [ins] = canWriteOrderUserId
+      ? await conn.query(
+          `
         INSERT INTO orders (
           order_code, customer_id, user_id, sales_user_id,
           customer_name, customer_email, customer_phone, shipping_address,
@@ -194,23 +198,23 @@ async function createStorefrontOrder(body, authUser) {
         )
         VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, 'web', 'pending', ?, ?, ?, ?, NULL)
         `,
-        [
-          orderCode,
-          customerId,
-          uid,
-          truncate(customerName, 150),
-          customerEmail ? truncate(customerEmail, 120) : null,
-          truncate(customerPhone, 20),
-          address,
-          paymentMethod,
-          subtotal,
-          discountAmount,
-          shippingFee,
-          totalAmount,
-        ]
-      )
-    : await pool.query(
-        `
+          [
+            orderCode,
+            customerId,
+            uid,
+            truncate(customerName, 150),
+            customerEmail ? truncate(customerEmail, 120) : null,
+            truncate(customerPhone, 20),
+            address,
+            paymentMethod,
+            subtotal,
+            discountAmount,
+            shippingFee,
+            totalAmount,
+          ]
+        )
+      : await conn.query(
+          `
         INSERT INTO orders (
           order_code, customer_id, sales_user_id,
           customer_name, customer_email, customer_phone, shipping_address,
@@ -219,26 +223,28 @@ async function createStorefrontOrder(body, authUser) {
         )
         VALUES (?, ?, NULL, ?, ?, ?, ?, ?, 'web', 'pending', ?, ?, ?, ?, NULL)
         `,
-        [
-          orderCode,
-          customerId,
-          truncate(customerName, 150),
-          customerEmail ? truncate(customerEmail, 120) : null,
-          truncate(customerPhone, 20),
-          address,
-          paymentMethod,
-          subtotal,
-          discountAmount,
-          shippingFee,
-          totalAmount,
-        ]
-      );
+          [
+            orderCode,
+            customerId,
+            truncate(customerName, 150),
+            customerEmail ? truncate(customerEmail, 120) : null,
+            truncate(customerPhone, 20),
+            address,
+            paymentMethod,
+            subtotal,
+            discountAmount,
+            shippingFee,
+            totalAmount,
+          ]
+        );
 
-  const orderId = ins.insertId;
+    const orderId = ins.insertId;
+    if (!orderId) {
+      throw new AppError("Không tạo được đơn hàng", 500, "ORDER_CREATE_FAILED");
+    }
 
-  try {
     for (const l of lines) {
-      await pool.query(
+      await conn.query(
         `
         INSERT INTO order_items (order_id, product_id, variant_id, product_name, variant_name, quantity, unit_price)
         VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -247,30 +253,32 @@ async function createStorefrontOrder(body, authUser) {
       );
     }
 
-    await pool.query(
+    await conn.query(
       `INSERT INTO order_status_history (order_id, status, note, changed_by) VALUES (?, 'pending', ?, NULL)`,
       [orderId, "Đặt hàng từ website"]
     );
 
     if (voucherCodeForRedeem) {
-      await vouchersService.redeemVoucher(voucherCodeForRedeem, subtotal);
+      await vouchersService.redeemVoucher(voucherCodeForRedeem, subtotal, (sql, params) => conn.query(sql, params));
     }
-  } catch (err) {
-    await pool.query("DELETE FROM order_status_history WHERE order_id = ?", [orderId]);
-    await pool.query("DELETE FROM order_items WHERE order_id = ?", [orderId]);
-    await pool.query("DELETE FROM orders WHERE id = ?", [orderId]);
-    throw err;
-  }
 
-  return {
-    orderId,
-    orderCode,
-    subtotal,
-    discountAmount,
-    shippingFee,
-    totalAmount,
-    status: "pending",
-  };
+    await conn.commit();
+
+    return {
+      orderId,
+      orderCode,
+      subtotal,
+      discountAmount,
+      shippingFee,
+      totalAmount,
+      status: "pending",
+    };
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
 }
 
 module.exports = { createStorefrontOrder, FREE_SHIPPING_THRESHOLD, DEFAULT_SHIPPING_FEE };

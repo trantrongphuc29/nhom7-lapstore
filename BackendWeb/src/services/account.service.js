@@ -4,7 +4,7 @@ const UserAddress = require("../../models/UserAddress");
 const UserCartItem = require("../../models/UserCartItem");
 const AppError = require("../utils/AppError");
 const pool = require("../../config/database");
-let cachedHasOrdersUserIdColumn = null;
+const { ordersTableHasUserIdColumn } = require("../utils/ordersSchema.util");
 
 function publicUser(row) {
   if (!row) return null;
@@ -25,22 +25,6 @@ async function getCustomerByUserId(userId) {
     [userId]
   );
   return row || null;
-}
-
-async function hasOrdersUserIdColumn() {
-  if (cachedHasOrdersUserIdColumn != null) return cachedHasOrdersUserIdColumn;
-  const [rows] = await pool.query(
-    `
-      SELECT 1
-      FROM information_schema.COLUMNS
-      WHERE TABLE_SCHEMA = DATABASE()
-        AND TABLE_NAME = 'orders'
-        AND COLUMN_NAME = 'user_id'
-      LIMIT 1
-    `
-  );
-  cachedHasOrdersUserIdColumn = rows.length > 0;
-  return cachedHasOrdersUserIdColumn;
 }
 
 async function getProfile(userId) {
@@ -131,7 +115,7 @@ async function deleteAddress(userId, id) {
 
 /** Trả về `status` DB: pending | accepted | delivered (giao diện khách map qua customerOrderStatus). */
 async function listOrders(userId) {
-  const useUserId = await hasOrdersUserIdColumn();
+  const useUserId = await ordersTableHasUserIdColumn(pool);
   const whereByAccount = useUserId
     ? "o.user_id = ?"
     : "EXISTS (SELECT 1 FROM customers c WHERE c.id = o.customer_id AND c.user_id = ?)";
