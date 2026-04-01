@@ -25,7 +25,7 @@ function buildRevenuePeriodFilter(query = {}) {
       values.push(day);
       return { sql: " AND DATE(o.created_at) = ? ", values, label: `Ngày ${day}` };
     }
-    return { sql: " AND DATE(o.created_at) = CURDATE() ", values, label: "Ngày hiện tại" };
+    return { sql: " AND DATE(o.created_at) = CURRENT_DATE ", values, label: "Ngày hiện tại" };
   }
   if (periodType === "month") {
     const y = Number(query.year);
@@ -257,7 +257,7 @@ async function buildReport(report, query, user) {
         COALESCE(pam.status, 'active') AS status,
         COALESCE(pam.sku, '') AS productSku,
         COALESCE(pam.slug, '') AS slug,
-        COALESCE(pv.sku, CONCAT('VAR-', pv.id)) AS variantSku,
+        COALESCE(pv.sku, 'VAR-' || pv.id) AS variantSku,
         COALESCE(pv.version, '') AS variantVersion,
         COALESCE(pv.color, '') AS color,
         COALESCE(pv.ram, '') AS ram,

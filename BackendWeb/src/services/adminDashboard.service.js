@@ -17,7 +17,7 @@ async function getKpis() {
     `
       SELECT COALESCE(SUM(total_amount), 0) AS value
       FROM orders
-      WHERE DATE(created_at) = CURDATE()
+      WHERE DATE(created_at) = CURRENT_DATE
         AND status IN ('accepted', 'delivered')
     `
   );
@@ -25,7 +25,7 @@ async function getKpis() {
     `
       SELECT COUNT(*) AS value
       FROM orders
-      WHERE DATE(created_at) = CURDATE()
+      WHERE DATE(created_at) = CURRENT_DATE
     `
   );
   let lowStock = { value: 0 };
@@ -58,7 +58,7 @@ async function getKpis() {
     `
       SELECT COUNT(*) AS value
       FROM customers
-      WHERE DATE(created_at) = CURDATE()
+      WHERE DATE(created_at) = CURRENT_DATE
     `
   );
 
@@ -168,16 +168,16 @@ async function getRecentPendingOrdersPreview(limit = 8) {
 
 async function getRevenueCompare() {
   const [today = { v: 0 }] = await safeQuery(
-    `SELECT COALESCE(SUM(total_amount),0) AS v FROM orders WHERE DATE(created_at)=CURDATE() AND status IN ('accepted','delivered')`
+    `SELECT COALESCE(SUM(total_amount),0) AS v FROM orders WHERE DATE(created_at)=CURRENT_DATE AND status IN ('accepted','delivered')`
   );
   const [week = { v: 0 }] = await safeQuery(
-    `SELECT COALESCE(SUM(total_amount),0) AS v FROM orders WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) AND status IN ('accepted','delivered')`
+    `SELECT COALESCE(SUM(total_amount),0) AS v FROM orders WHERE created_at >= (CURRENT_DATE - INTERVAL '7 DAY') AND status IN ('accepted','delivered')`
   );
   const [month = { v: 0 }] = await safeQuery(
-    `SELECT COALESCE(SUM(total_amount),0) AS v FROM orders WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) AND status IN ('accepted','delivered')`
+    `SELECT COALESCE(SUM(total_amount),0) AS v FROM orders WHERE created_at >= (CURRENT_DATE - INTERVAL '30 DAY') AND status IN ('accepted','delivered')`
   );
   const [todayPrev = { v: 0 }] = await safeQuery(
-    `SELECT COALESCE(SUM(total_amount),0) AS v FROM orders WHERE DATE(created_at)=DATE_SUB(CURDATE(), INTERVAL 1 DAY) AND status IN ('accepted','delivered')`
+    `SELECT COALESCE(SUM(total_amount),0) AS v FROM orders WHERE DATE(created_at)=(CURRENT_DATE - INTERVAL '1 DAY') AND status IN ('accepted','delivered')`
   );
   return {
     today: Number(today.v || 0),

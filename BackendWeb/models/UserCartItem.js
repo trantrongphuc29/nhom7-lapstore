@@ -39,7 +39,7 @@ class UserCartItem {
         uci.quantity,
         uci.snapshot,
         COALESCE(
-          NULLIF(TRIM(JSON_UNQUOTE(JSON_EXTRACT(uci.snapshot, '$.image'))), ''),
+          NULLIF(TRIM(uci.snapshot->>'image'), ''),
           (SELECT pi.image_url
            FROM product_images pi
            WHERE pi.product_id = uci.product_id
