@@ -43,7 +43,7 @@ class Product {
       LEFT JOIN product_admin_meta pam ON pam.product_id = p.id
       LEFT JOIN product_variants pv ON pv.product_id = p.id
       LEFT JOIN product_specs ps ON ps.product_id = p.id
-      GROUP BY p.id
+      GROUP BY p.id, ps.product_id
       ORDER BY p.created_at DESC
     `);
     return rows;
@@ -131,7 +131,7 @@ class Product {
       }
     }
 
-    query += ' GROUP BY p.id ORDER BY p.created_at DESC';
+    query += ' GROUP BY p.id, ps.product_id ORDER BY p.created_at DESC';
     const [rows] = await pool.query(query, values);
     return rows;
   }
