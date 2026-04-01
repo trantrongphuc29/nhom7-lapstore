@@ -25,7 +25,7 @@ class Product {
     const [rows] = await pool.query(`
       SELECT p.id, p.name, p.brand, p.image, p.description, p.created_at,
              MIN(pv.price) AS min_price, MAX(pv.discount) AS min_discount,
-             ps.product_id, ps.cpu, ps.screen_resolution, ps.screen_technology,
+             MAX(ps.product_id) AS product_id, MAX(ps.cpu) AS cpu, MAX(ps.screen_resolution) AS screen_resolution, MAX(ps.screen_technology) AS screen_technology,
              MIN(pv.ram) AS ram, MIN(pv.storage) AS storage,
              COUNT(DISTINCT pv.id) AS variant_count,
              STRING_AGG(DISTINCT pv.color ORDER BY pv.color, '|') AS colors,
@@ -44,7 +44,7 @@ class Product {
       LEFT JOIN product_admin_meta pam ON pam.product_id = p.id
       LEFT JOIN product_variants pv ON pv.product_id = p.id
       LEFT JOIN product_specs ps ON ps.product_id = p.id
-      GROUP BY p.id, p.name, p.brand, p.image, p.description, p.created_at, ps.product_id, ps.cpu, ps.screen_resolution, ps.screen_technology
+      GROUP BY p.id, p.name, p.brand, p.image, p.description, p.created_at
       ORDER BY p.created_at DESC
     `);
     return rows;
@@ -56,7 +56,7 @@ class Product {
     let query = `
       SELECT p.id, p.name, p.brand, p.image, p.description, p.created_at,
              MIN(pv.price) AS min_price, MAX(pv.discount) AS min_discount,
-             ps.product_id, ps.cpu, ps.screen_resolution, ps.screen_technology,
+             MAX(ps.product_id) AS product_id, MAX(ps.cpu) AS cpu, MAX(ps.screen_resolution) AS screen_resolution, MAX(ps.screen_technology) AS screen_technology,
              MIN(pv.ram) AS ram, MIN(pv.storage) AS storage,
              COUNT(DISTINCT pv.id) AS variant_count,
              STRING_AGG(DISTINCT pv.color ORDER BY pv.color, '|') AS colors,
@@ -133,7 +133,7 @@ class Product {
       }
     }
 
-    query += ' GROUP BY p.id, p.name, p.brand, p.image, p.description, p.created_at, ps.product_id, ps.cpu, ps.screen_resolution, ps.screen_technology ORDER BY p.created_at DESC';
+    query += ' GROUP BY p.id, p.name, p.brand, p.image, p.description, p.created_at ORDER BY p.created_at DESC';
     const [rows] = await pool.query(query, values);
     return rows;
   }
