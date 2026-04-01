@@ -7,6 +7,20 @@ function isPgSchemaError(error) {
   return code === "42P01" || code === "42703";
 }
 
+/** orders.customer_id references customers.id, not users.id */
+const CUSTOMER_ORDER_SPENT_SQL = `
+  COALESCE(
+    (
+      SELECT SUM(o.total_amount)
+      FROM orders o
+      WHERE o.customer_id = c.id
+        AND o.status IN ('accepted', 'delivered')
+    ),
+    c.total_spent,
+    0
+  )
+`;
+
 async function getAdminCustomers(query) {
   const page = Math.max(1, Number(query.page) || 1);
   const limit = Math.min(100, Math.max(5, Number(query.limit) || 10));
@@ -46,7 +60,7 @@ async function getAdminCustomers(query) {
           COALESCE(c.status, 'active') AS status,
           COALESCE(c.customer_group, 'retail') AS customerGroup,
           COALESCE(c.loyalty_points, 0) AS loyaltyPoints,
-          COALESCE(c.total_spent, 0) AS totalSpent,
+          ${CUSTOMER_ORDER_SPENT_SQL} AS totalSpent,
           COALESCE(c.created_at, u.created_at) AS createdAt
         FROM users u
         LEFT JOIN customers c ON c.user_id = u.id
@@ -105,7 +119,7 @@ async function getAdminCustomerById(id) {
           COALESCE(c.status, 'active') AS status,
           COALESCE(c.customer_group, 'retail') AS customerGroup,
           COALESCE(c.loyalty_points, 0) AS loyaltyPoints,
-          COALESCE(c.total_spent, 0) AS totalSpent,
+          ${CUSTOMER_ORDER_SPENT_SQL} AS totalSpent,
           COALESCE(c.created_at, u.created_at) AS createdAt
         FROM users u
         LEFT JOIN customers c ON c.user_id = u.id
@@ -140,11 +154,11 @@ async function getAdminCustomerById(id) {
     `
       SELECT id, order_code AS code, total_amount AS totalAmount, status, created_at AS createdAt
       FROM orders
-      WHERE customer_id = ? OR user_id = ?
+      WHERE customer_id IN (SELECT id FROM customers WHERE user_id = ?)
       ORDER BY created_at DESC
       LIMIT 10
     `,
-    [userId, userId]
+    [userId]
   );
   return {
     ...customer,

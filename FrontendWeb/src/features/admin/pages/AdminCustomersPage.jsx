@@ -110,6 +110,7 @@ export default function AdminCustomersPage() {
               <p className="text-xs text-slate-500">{detail.email || "-"}</p>
               <p className="text-xs text-slate-500">{detail.phone || "-"}</p>
             </div>
+            <div className="text-xs text-slate-600">Nhóm: {detail.customerGroup || "—"}</div>
             <div className="text-xs text-slate-600">Điểm tích lũy: {detail.loyaltyPoints}</div>
             <div className="text-xs text-slate-600">Tổng chi tiêu: {formatVnd(detail.totalSpent)}đ</div>
             <div className="flex gap-2">
