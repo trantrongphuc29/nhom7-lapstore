@@ -32,7 +32,7 @@ async function getAdminCustomers(query) {
     `
       SELECT
         u.id,
-        COALESCE(c.full_name, SUBSTRING_INDEX(u.email, '@', 1)) AS fullName,
+        COALESCE(c.full_name, SPLIT_PART(u.email, '@', 1)) AS fullName,
         u.email,
         c.phone,
         COALESCE(c.status, 'active') AS status,
@@ -66,7 +66,7 @@ async function getAdminCustomerById(id) {
     `
       SELECT
         u.id,
-        COALESCE(c.full_name, SUBSTRING_INDEX(u.email, '@', 1)) AS fullName,
+        COALESCE(c.full_name, SPLIT_PART(u.email, '@', 1)) AS fullName,
         u.email,
         c.phone,
         COALESCE(c.status, 'active') AS status,
