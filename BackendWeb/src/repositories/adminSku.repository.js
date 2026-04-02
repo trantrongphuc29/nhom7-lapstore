@@ -1,7 +1,7 @@
 async function findVariantBySku(conn, sku, variantId = null) {
   if (variantId != null) {
     const [[row]] = await conn.query(
-      `SELECT id FROM product_variants WHERE sku = ? AND ( ? IS NULL OR id <> ? ) LIMIT 1`,
+      `SELECT id FROM product_variants WHERE sku = ? AND ( ?::int IS NULL OR id <> ?::int ) LIMIT 1`,
       [sku, variantId, variantId]
     );
     return row || null;

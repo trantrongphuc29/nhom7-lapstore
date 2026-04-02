@@ -62,7 +62,7 @@ async function assertSkuFreeForVariant(conn, rawSku, productId, variantId) {
   if (fmt) throw new AppError(fmt, 400, "VALIDATION_ERROR");
   const vid = Number.isInteger(variantId) && variantId > 0 ? variantId : null;
   const [[rowV]] = await conn.query(
-    `SELECT id FROM product_variants WHERE sku = ? AND ( ? IS NULL OR id <> ? ) LIMIT 1`,
+    `SELECT id FROM product_variants WHERE sku = ? AND ( ?::int IS NULL OR id <> ?::int ) LIMIT 1`,
     [sku, vid, vid]
   );
   if (rowV) throw new AppError("SKU phiên bản đã tồn tại (trùng với phiên bản khác)", 409, "SKU_CONFLICT");
