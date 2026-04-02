@@ -100,6 +100,41 @@ function toMysqlLikeResult(pgResult, rows) {
   return [info];
 }
 
+const cachedTableHasIdColumn = new Map();
+
+function extractInsertTableName(sql) {
+  const m = String(sql || "").match(/^\s*insert\s+into\s+("?[\w.]+"?)/i);
+  if (!m) return null;
+  const raw = m[1] || "";
+  const unquoted = raw.replace(/^"/, "").replace(/"$/, "");
+  const last = unquoted.split(".").pop();
+  return last || null;
+}
+
+async function tableHasIdColumn(client, tableName) {
+  if (!tableName) return false;
+  if (cachedTableHasIdColumn.has(tableName)) return cachedTableHasIdColumn.get(tableName);
+  try {
+    const res = await client.__nativeQuery(
+      `
+      SELECT 1
+      FROM information_schema.columns
+      WHERE table_schema = ANY (current_schemas(false))
+        AND table_name = $1
+        AND column_name = 'id'
+      LIMIT 1
+      `,
+      [tableName]
+    );
+    const ok = (res?.rows || []).length > 0;
+    cachedTableHasIdColumn.set(tableName, ok);
+    return ok;
+  } catch {
+    cachedTableHasIdColumn.set(tableName, false);
+    return false;
+  }
+}
+
 async function runQuery(client, rawSql, params = []) {
   const normalized = normalizeSql(rawSql);
   const { text, values } = bindQuestionParams(normalized, params);
@@ -107,21 +142,19 @@ async function runQuery(client, rawSql, params = []) {
   const hasReturning = /\breturning\b/i.test(text);
   try {
     if (isInsert && !hasReturning) {
-      const withReturning = `${text} RETURNING id`;
-      const res = await client.__nativeQuery(withReturning, values);
+      const tableName = extractInsertTableName(text);
+      const canReturnId = await tableHasIdColumn(client, tableName);
+      if (canReturnId) {
+        const withReturning = `${text} RETURNING id`;
+        const res = await client.__nativeQuery(withReturning, values);
+        return toMysqlLikeResult(res, res.rows || []);
+      }
+      const res = await client.__nativeQuery(text, values);
       return toMysqlLikeResult(res, res.rows || []);
     }
     const res = await client.__nativeQuery(text, values);
     return toMysqlLikeResult(res, res.rows || []);
   } catch (error) {
-    if (isInsert && !hasReturning) {
-      try {
-        const res = await client.__nativeQuery(text, values);
-        return toMysqlLikeResult(res, res.rows || []);
-      } catch (fallbackErr) {
-        throw mapPgError(fallbackErr);
-      }
-    }
     throw mapPgError(error);
   }
 }
