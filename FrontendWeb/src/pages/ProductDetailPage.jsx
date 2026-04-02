@@ -20,6 +20,14 @@ function buildDisplayTitle(productName, v, specs) {
   return `${productName} - ${summary}`;
 }
 
+function toPublicImageUrl(pathOrUrl) {
+  const raw = pathOrUrl != null ? String(pathOrUrl).trim() : "";
+  if (!raw) return null;
+  if (/^https?:\/\//i.test(raw)) return raw;
+  const cleaned = raw.replace(/^\/+/, "");
+  return `${BACKEND_BASE_URL}/${cleaned}`;
+}
+
 /** Trạng thái từ product_admin_meta (API) */
 const STOREFRONT_STATUS = {
   inactive: { label: 'Ngưng bán', hint: 'Sản phẩm đã ngừng kinh doanh.' },
@@ -40,7 +48,7 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [selectedVariant, setSelectedVariant] = useState(0);
   const [showSpecsModal, setShowSpecsModal] = useState(false);
-  const images = product?.images?.map(img => `${BACKEND_BASE_URL}/${img.image_url}`) || [];
+  const images = product?.images?.map((img) => toPublicImageUrl(img.image_url)).filter(Boolean) || [];
   const [selectedImage, setSelectedImage] = useState(0);
 
   // Khóa cuộn trang khi modal mở + bù scrollbar để không lệch layout
@@ -151,9 +159,7 @@ export default function ProductDetailPage() {
       ? Math.max(0, Math.round(((listOriginal - salePrice) / listOriginal) * 100))
       : 0;
   const discountBadgePct = derivedDiscountPct > 0 ? derivedDiscountPct : Number(variant.discount || 0);
-  const imageUrl = variant.image
-    ? `${BACKEND_BASE_URL}/${variant.image}`
-    : product.image ? `${BACKEND_BASE_URL}/${product.image}` : null;
+  const imageUrl = toPublicImageUrl(variant.image) || toPublicImageUrl(product.image);
 
   const descShort = (product.shortDescription || product.description || "").trim();
   const descDetailHtml = (product.detailHtml || "").trim();
