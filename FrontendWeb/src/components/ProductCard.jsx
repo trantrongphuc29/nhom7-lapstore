@@ -29,7 +29,7 @@ const ProductCard = ({ product }) => {
   return (
     <Link
       to={storefrontProductPath(product)}
-      className="bg-white rounded-2xl border border-slate-100 overflow-hidden hover:border-slate-50 hover:shadow-[0_10px_40px_-4px_rgba(15,23,42,0.12)] transition-[box-shadow,border-color] duration-200 relative flex flex-col h-[468px] max-h-[468px]"
+      className="bg-white rounded-2xl border border-slate-100 overflow-hidden hover:border-slate-50 hover:shadow-[0_10px_40px_-4px_rgba(15,23,42,0.12)] transition-[box-shadow,border-color] duration-200 relative flex flex-col h-[490px] max-h-[490px]"
     >
       <div className="p-3 md:p-4 flex flex-col h-full min-h-0 min-w-0">
         <div className="relative h-[210px] md:h-[232px] w-full shrink-0 overflow-hidden rounded-xl bg-white flex items-center justify-center group/image">
