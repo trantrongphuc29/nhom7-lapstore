@@ -102,8 +102,8 @@ export default function CartPage() {
             </Link>
           </div>
         ) : (
-          <div className="flex flex-col lg:flex-row gap-8 items-start w-full">
-            <div className="flex-1 w-full min-w-0 space-y-3 pb-28 lg:pb-0">
+          <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start w-full">
+            <div className="flex-1 w-full min-w-0 space-y-3 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] lg:pb-0">
               <div className="flex items-center gap-3 text-sm mb-2">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={selected.size === items.length && items.length > 0} onChange={toggleAll} className="rounded border-slate-300" />
@@ -122,23 +122,23 @@ export default function CartPage() {
                 return (
                   <div
                     key={li.lineId}
-                    className={`relative bg-white rounded-2xl border border-slate-200 p-4 flex flex-col sm:flex-row gap-4 ${
+                    className={`relative flex gap-3 rounded-2xl border border-slate-200 bg-white p-3 sm:p-4 ${
                       out ? "opacity-75" : ""
                     }`}
                   >
                     {out ? (
-                      <div className="absolute inset-0 bg-white/70 rounded-2xl flex flex-col items-center justify-center z-10 gap-2">
+                      <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-2xl bg-white/70">
                         <span className="font-bold text-slate-800">Hết hàng</span>
                         <button
                           type="button"
                           onClick={() => removeLine(li.lineId)}
-                          className="text-sm text-rose-600 font-semibold underline"
+                          className="text-sm font-semibold text-rose-600 underline"
                         >
                           Xóa khỏi giỏ
                         </button>
                       </div>
                     ) : null}
-                    <label className="flex items-start gap-3 shrink-0 pt-1">
+                    <label className="shrink-0 pt-0.5">
                       <input
                         type="checkbox"
                         checked={selected.has(li.lineId)}
@@ -146,62 +146,80 @@ export default function CartPage() {
                         className="mt-1 rounded border-slate-300"
                       />
                     </label>
-                    <Link to={storefrontProductPath({ id: li.productId, slug: li.productSlug })} className="shrink-0 w-[100px] h-[100px] rounded-xl border border-slate-100 bg-slate-50 overflow-hidden flex items-center justify-center">
+                    <Link
+                      to={storefrontProductPath({ id: li.productId, slug: li.productSlug })}
+                      className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-100 bg-slate-50 sm:h-[100px] sm:w-[100px]"
+                    >
                       {imgSrc(li.image) ? (
-                        <img src={imgSrc(li.image)} alt="" className="w-full h-full object-contain" />
+                        <img src={imgSrc(li.image)} alt="" className="h-full w-full object-contain" />
                       ) : (
-                        <span className="material-symbols-outlined text-4xl text-slate-200">laptop</span>
+                        <span className="material-symbols-outlined text-3xl text-slate-200 sm:text-4xl">laptop</span>
                       )}
                     </Link>
-                    <div className="flex-1 min-w-0">
-                      <Link to={storefrontProductPath({ id: li.productId, slug: li.productSlug })} className="font-bold text-slate-900 line-clamp-2 hover:text-slate-700 transition">
-                        {li.name}
-                      </Link>
-                      <p className="text-sm text-slate-600 mt-1 line-clamp-2">{li.specSummary}</p>
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <StockTag stock={li.stock} qty={li.quantity} />
-                      </div>
-                      <div className="mt-3 flex flex-wrap items-center gap-3">
-                        <div className="inline-flex items-center border border-slate-200 rounded-lg">
+                    <div className="min-w-0 flex-1 sm:flex sm:gap-4">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <Link
+                            to={storefrontProductPath({ id: li.productId, slug: li.productSlug })}
+                            className="line-clamp-2 min-w-0 flex-1 font-bold text-slate-900 transition hover:text-slate-700"
+                          >
+                            {li.name}
+                          </Link>
+                          <p className="shrink-0 text-base font-bold tabular-nums text-rose-600 sm:hidden">
+                            {fmtPrice(li.price * li.quantity)}₫
+                          </p>
+                        </div>
+                        <p className="mt-1 line-clamp-2 text-xs text-slate-600 sm:text-sm">{li.specSummary}</p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <StockTag stock={li.stock} qty={li.quantity} />
+                        </div>
+                        <div className="mt-3 flex flex-wrap items-center gap-3">
+                          <div className="inline-flex items-center rounded-lg border border-slate-200">
+                            <button
+                              type="button"
+                              disabled={li.quantity <= 1 || updating[li.lineId]}
+                              onClick={() => bumpQty(li.lineId, li.quantity - 1)}
+                              className="px-2.5 py-1.5 font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40 sm:px-3"
+                            >
+                              −
+                            </button>
+                            <span className="relative min-w-[2rem] px-2 text-center text-sm font-semibold tabular-nums sm:px-3">
+                              {updating[li.lineId] ? (
+                                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-800" />
+                              ) : (
+                                li.quantity
+                              )}
+                            </span>
+                            <button
+                              type="button"
+                              disabled={li.quantity >= (Number(li.stock) || 0) || updating[li.lineId]}
+                              onClick={() => bumpQty(li.lineId, li.quantity + 1)}
+                              className="px-2.5 py-1.5 font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40 sm:px-3"
+                            >
+                              +
+                            </button>
+                          </div>
                           <button
                             type="button"
-                            disabled={li.quantity <= 1 || updating[li.lineId]}
-                            onClick={() => bumpQty(li.lineId, li.quantity - 1)}
-                            className="px-3 py-1.5 text-slate-700 hover:bg-slate-50 disabled:opacity-40 font-bold"
+                            onClick={() => removeLine(li.lineId)}
+                            className="text-sm font-medium text-rose-400 hover:text-rose-600"
                           >
-                            −
-                          </button>
-                          <span className="px-3 text-sm font-semibold tabular-nums min-w-[2rem] text-center relative">
-                            {updating[li.lineId] ? (
-                              <span className="inline-block w-4 h-4 border-2 border-slate-300 border-t-slate-800 rounded-full animate-spin" />
-                            ) : (
-                              li.quantity
-                            )}
-                          </span>
-                          <button
-                            type="button"
-                            disabled={li.quantity >= (Number(li.stock) || 0) || updating[li.lineId]}
-                            onClick={() => bumpQty(li.lineId, li.quantity + 1)}
-                            className="px-3 py-1.5 text-slate-700 hover:bg-slate-50 disabled:opacity-40 font-bold"
-                          >
-                            +
+                            Xóa
                           </button>
                         </div>
-                        <button type="button" onClick={() => removeLine(li.lineId)} className="text-sm text-rose-400 hover:text-rose-600 font-medium">
-                          Xóa
-                        </button>
+                        <p className="mt-2 text-xs text-slate-500 sm:hidden">{fmtPrice(li.price)}₫ / sản phẩm</p>
                       </div>
-                    </div>
-                    <div className="text-right sm:min-w-[120px]">
-                      <p className="text-lg font-bold text-rose-600 tabular-nums">{fmtPrice(li.price * li.quantity)}₫</p>
-                      <p className="text-xs text-slate-500 mt-1">{fmtPrice(li.price)}₫ / sản phẩm</p>
+                      <div className="hidden min-w-[120px] shrink-0 text-right sm:block">
+                        <p className="text-lg font-bold tabular-nums text-rose-600">{fmtPrice(li.price * li.quantity)}₫</p>
+                        <p className="mt-1 text-xs text-slate-500">{fmtPrice(li.price)}₫ / sản phẩm</p>
+                      </div>
                     </div>
                   </div>
                 );
               })}
             </div>
 
-            <aside className="w-full lg:w-[360px] shrink-0 lg:sticky lg:top-24 space-y-4">
+            <aside className="hidden w-full shrink-0 space-y-4 lg:block lg:w-[360px] lg:sticky lg:top-24">
               <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
                 <h2 className="font-bold text-slate-900 mb-4">Tóm tắt đơn hàng</h2>
                 <div className="space-y-2 text-sm">
@@ -255,16 +273,16 @@ export default function CartPage() {
 
         {/* Mobile sticky bar */}
         {items.length > 0 ? (
-          <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur px-4 py-3 flex items-center justify-between gap-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
-            <div>
-              <p className="text-xs text-slate-500">Tổng</p>
-              <p className="text-lg font-bold text-rose-600 tabular-nums">{fmtPrice(totals.total)}₫</p>
+          <div className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-between gap-3 border-t border-slate-200 bg-white/95 px-4 pt-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] backdrop-blur lg:hidden pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            <div className="min-w-0">
+              <p className="text-[11px] text-slate-500">Tổng thanh toán</p>
+              <p className="truncate text-lg font-bold tabular-nums text-rose-600">{fmtPrice(totals.total)}₫</p>
             </div>
             <button
               type="button"
               onClick={goCheckout}
               disabled={!allInStock}
-              className="rounded-xl bg-[#CCFF00] text-black px-5 py-3 font-bold text-sm shrink-0 disabled:opacity-50"
+              className="shrink-0 rounded-xl bg-[#CCFF00] px-5 py-3 text-sm font-bold text-black disabled:opacity-50"
             >
               ĐẶT HÀNG →
             </button>

@@ -13,6 +13,19 @@ const Header = () => {
   const [cartOpen, setCartOpen] = useState(false);
   const cartAnchorRef = useRef(null);
 
+  const mobileAccountPath = !isAuthenticated
+    ? "/login"
+    : isStaffRole(user?.role)
+      ? getStaffHomePath()
+      : isRetailCustomerRole(user?.role)
+        ? "/tai-khoan/thong-tin"
+        : "/login";
+  const mobileAccountLabel = !isAuthenticated
+    ? "Đăng nhập"
+    : isStaffRole(user?.role)
+      ? "Trang quản trị"
+      : "Tài khoản";
+
   return (
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200 ">
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-8">
@@ -80,9 +93,13 @@ const Header = () => {
             </button>
             <MiniCartDropdown open={cartOpen} onClose={() => setCartOpen(false)} anchorRef={cartAnchorRef} />
           </div>
-          <button className="lg:hidden p-2 rounded-xl bg-slate-100 text-slate-700">
-            <span className="material-symbols-outlined">menu</span>
-          </button>
+          <Link
+            to={mobileAccountPath}
+            className="lg:hidden p-2.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all"
+            aria-label={mobileAccountLabel}
+          >
+            <span className="material-symbols-outlined block leading-none">menu</span>
+          </Link>
         </div>
       </div>
     </header>

@@ -34,7 +34,7 @@ const ProductGridPanel = ({
   return (
     <section className={`flex-1 ${showCompareBar ? "pb-36" : ""}`}>
       <div className="mb-6 flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-3 font-bold sm:p-4">
-        <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex min-w-0 flex-1 items-center gap-3 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <span className="shrink-0 whitespace-nowrap text-sm text-slate-500">Sắp xếp:</span>
           {SORT_OPTIONS.map((sort) => (
             <button
