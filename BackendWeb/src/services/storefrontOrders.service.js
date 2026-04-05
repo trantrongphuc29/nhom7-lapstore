@@ -1,12 +1,11 @@
 const pool = require("../../config/database");
 const AppError = require("../utils/AppError");
 const vouchersService = require("./vouchers.service");
-
-const FREE_SHIPPING_THRESHOLD = 10_000_000;
-const DEFAULT_SHIPPING_FEE = 50_000;
+const adminSettingsService = require("./adminSettings.service");
 
 const PICKUP_STORES = [
-  { id: "hcm-q1", label: "LAPSTORE Quận 1 — 123 Nguyễn Huệ, Q.1, TP.HCM" }
+  { id: "hcm-q1", label: "LAPSTORE Quận 1 — 123 Nguyễn Huệ, Q.1, TP.HCM" },
+  { id: "hcm-q8", label: "LAPSTORE Quận 8 — 180 Cao Lỗ, Q.8, TPHCM" },
 ];
 const { ordersTableHasUserIdColumn } = require("../utils/ordersSchema.util");
 
@@ -168,7 +167,10 @@ async function createStorefrontOrder(body, authUser) {
     voucherCodeForRedeem = preview.code;
   }
 
-  const shippingFee = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : DEFAULT_SHIPPING_FEE;
+  const sf = await adminSettingsService.getStorefrontSettings();
+  const freeFrom = Number(sf.free_shipping_threshold) || 0;
+  const shipFee = Number(sf.default_shipping_fee) || 0;
+  const shippingFee = subtotal >= freeFrom ? 0 : shipFee;
   const totalAmount = Math.max(0, subtotal - discountAmount + shippingFee);
 
   const orderCode = await generateOrderCode();
@@ -281,4 +283,4 @@ async function createStorefrontOrder(body, authUser) {
   }
 }
 
-module.exports = { createStorefrontOrder, FREE_SHIPPING_THRESHOLD, DEFAULT_SHIPPING_FEE };
+module.exports = { createStorefrontOrder };

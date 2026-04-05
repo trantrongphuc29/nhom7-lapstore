@@ -2,13 +2,11 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { API_ENDPOINTS } from "../config/api";
 import { isStaffRole, normalizeRole } from "../features/admin/utils/rbac";
 import { useAuth } from "./AuthContext";
+import { useStoreConfig } from "./StoreConfigContext";
 import { buildVariantSummary } from "../utils/productSpec";
 
 const CartContext = createContext(null);
 const STORAGE_KEY = "lapstore_cart_v1";
-
-export const FREE_SHIPPING_THRESHOLD = 10_000_000;
-export const DEFAULT_SHIPPING_FEE = 50_000;
 
 /** @typedef {{ lineId: string, productId: number, variantId: number, name: string, image: string|null, specSummary: string, price: number, stock: number, quantity: number, color?: string, productSlug?: string }} CartLine */
 
@@ -44,9 +42,11 @@ export function stockStatus(stock, qty) {
   return "in";
 }
 
-export function computeCartTotals(items, discount = 0) {
+export function computeCartTotals(items, discount = 0, shipping = {}) {
   const subtotal = items.reduce((sum, li) => sum + Number(li.price) * Number(li.quantity), 0);
-  const shippingFee = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : DEFAULT_SHIPPING_FEE;
+  const threshold = Number(shipping.freeShippingThreshold) || 10_000_000;
+  const fee = Number(shipping.defaultShippingFee) || 50_000;
+  const shippingFee = subtotal >= threshold ? 0 : fee;
   const total = Math.max(0, subtotal - discount + shippingFee);
   return { subtotal, discount, shippingFee, total };
 }
@@ -64,6 +64,7 @@ function resolveCartImage(product, variant, explicitImage) {
 }
 
 export function CartProvider({ children }) {
+  const { defaultShippingFee, freeShippingThreshold } = useStoreConfig();
   const { token, isAuthenticated, user } = useAuth();
   const isCustomerAccount = Boolean(
     isAuthenticated && token && !isStaffRole(normalizeRole(user?.role))
@@ -250,7 +251,10 @@ export function CartProvider({ children }) {
 
   const itemCount = useMemo(() => items.reduce((s, li) => s + li.quantity, 0), [items]);
 
-  const totals = useMemo(() => computeCartTotals(items, discount), [items, discount]);
+  const totals = useMemo(
+    () => computeCartTotals(items, discount, { defaultShippingFee, freeShippingThreshold }),
+    [items, discount, defaultShippingFee, freeShippingThreshold]
+  );
 
   const allInStock = useMemo(() => cartAllInStock(items), [items]);
 

@@ -6,6 +6,7 @@ import './index.css';
 import App from './App';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
+import { StoreConfigProvider } from './context/StoreConfigContext';
 import { CartProvider } from './context/CartContext';
 import ToastStack from './components/cart/ToastStack';
 
@@ -17,11 +18,13 @@ root.render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ToastProvider>
-          <CartProvider>
-            <App />
-            <ToastStack />
-          <Toaster position="top-right" />
-          </CartProvider>
+          <StoreConfigProvider>
+            <CartProvider>
+              <App />
+              <ToastStack />
+              <Toaster position="top-right" />
+            </CartProvider>
+          </StoreConfigProvider>
         </ToastProvider>
       </AuthProvider>
     </QueryClientProvider>

@@ -8,6 +8,24 @@ async function getPricingSettings(req, res) {
   sendSuccess(res, settings);
 }
 
+async function getStorefrontSettings(req, res) {
+  const settings = await adminSettingsService.getStorefrontSettings();
+  sendSuccess(res, settings);
+}
+
+async function patchStorefrontSettings(req, res) {
+  const next = await adminSettingsService.updateStorefrontSettings(req.body || {});
+  await adminAuditService.createAuditLog({
+    userId: req.user?.sub || null,
+    module: "settings",
+    action: "storefront_update",
+    targetType: "storefront_settings",
+    targetId: "default",
+    metadata: { keys: Object.keys(req.body || {}) },
+  });
+  sendSuccess(res, next);
+}
+
 async function patchPricingSettings(req, res) {
   const next = await adminSettingsService.updatePricingSettings(req.body || {});
   await adminAuditService.createAuditLog({
@@ -27,4 +45,10 @@ async function postPricingPreview(req, res) {
   sendSuccess(res, computed);
 }
 
-module.exports = { getPricingSettings, patchPricingSettings, postPricingPreview };
+module.exports = {
+  getPricingSettings,
+  patchPricingSettings,
+  postPricingPreview,
+  getStorefrontSettings,
+  patchStorefrontSettings,
+};

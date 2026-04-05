@@ -3,6 +3,7 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://nhom7-lapstore-ba
 const BACKEND_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'https://nhom7-lapstore-backend.onrender.com';
 
 export const API_ENDPOINTS = {
+  STORE_CONFIG: `${API_BASE_URL}/store-config`,
   PRODUCTS: `${API_BASE_URL}/products`,
   VOUCHER_PREVIEW: `${API_BASE_URL}/vouchers/preview`,
   VOUCHER_REDEEM: `${API_BASE_URL}/vouchers/redeem`,
@@ -40,6 +41,7 @@ export const API_ENDPOINTS = {
   ADMIN_PROMOTION_VOUCHER_DETAIL: (id) => `${API_BASE_URL}/admin/promotions/vouchers/${id}`,
   ADMIN_AUDIT_LOGS: `${API_BASE_URL}/admin/audit-logs`,
   ADMIN_PRICING_SETTINGS: `${API_BASE_URL}/admin/settings/pricing`,
+  ADMIN_STOREFRONT_SETTINGS: `${API_BASE_URL}/admin/settings/storefront`,
   ADMIN_PRICING_PREVIEW: `${API_BASE_URL}/admin/pricing/preview`,
   ADMIN_EXCEL_IMPORT: `${API_BASE_URL}/admin/excel/import`,
   ADMIN_EXCEL_TEMPLATE: (type) => `${API_BASE_URL}/admin/excel/template?type=${encodeURIComponent(type)}`,

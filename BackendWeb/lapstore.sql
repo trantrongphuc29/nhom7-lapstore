@@ -84,7 +84,8 @@ CREATE TABLE IF NOT EXISTS "app_settings" (
 --
 
 INSERT INTO "app_settings" ("key", "value", "updated_at") VALUES
-('pricing', '{"default_vat_rate": 10, "psychological_suffix": 990, "default_rounding_rule": "round_nearest_1000"}', '2026-03-24 20:09:22');
+('pricing', '{"default_vat_rate": 10, "psychological_suffix": 990, "default_rounding_rule": "round_nearest_1000"}', '2026-03-24 20:09:22'),
+('storefront', '{"default_shipping_fee": 50000, "free_shipping_threshold": 10000000, "default_fulfillment": "pickup", "footer_hotline": "1900 630 680", "footer_email": "lapstore@gmail.com"}', '2026-04-06 00:00:00');
 
 -- --------------------------------------------------------
 

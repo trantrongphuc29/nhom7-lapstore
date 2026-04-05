@@ -12,18 +12,33 @@ export default function AdminAuditLogsPage() {
   const { token } = useAuth();
   const [moduleFilter, setModuleFilter] = useState("");
   const [actionFilter, setActionFilter] = useState("");
+  const [userFilter, setUserFilter] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const debouncedModuleFilter = useDebouncedValue(moduleFilter, 400);
   const debouncedActionFilter = useDebouncedValue(actionFilter, 400);
+  const debouncedUserFilter = useDebouncedValue(userFilter, 400);
   const debouncedSearch = useDebouncedValue(search, 400);
   useEffect(() => {
     setPage(1);
-  }, [debouncedModuleFilter, debouncedActionFilter, debouncedSearch]);
+  }, [debouncedModuleFilter, debouncedActionFilter, debouncedUserFilter, debouncedSearch]);
   const query = useQuery({
-    queryKey: ["admin-audit-logs", { module: debouncedModuleFilter, action: debouncedActionFilter, search: debouncedSearch, page }],
+    queryKey: [
+      "admin-audit-logs",
+      { module: debouncedModuleFilter, action: debouncedActionFilter, user: debouncedUserFilter, search: debouncedSearch, page },
+    ],
     queryFn: () =>
-      getAdminAuditLogs({ module: debouncedModuleFilter, action: debouncedActionFilter, search: debouncedSearch, page, limit: 20 }, token),
+      getAdminAuditLogs(
+        {
+          module: debouncedModuleFilter,
+          action: debouncedActionFilter,
+          user: debouncedUserFilter,
+          search: debouncedSearch,
+          page,
+          limit: 20,
+        },
+        token
+      ),
     enabled: Boolean(token),
     keepPreviousData: true,
   });
@@ -32,23 +47,29 @@ export default function AdminAuditLogsPage() {
 
   return (
     <div>
-      <PageHeader title="Audit logs" subtitle="Theo dõi hành động quản trị theo module" />
+      <PageHeader title="Nhật ký admin" subtitle="Theo dõi thao tác quản trị: sản phẩm, đơn hàng, khuyến mãi, cài đặt…" />
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <input
           className="text-sm border border-slate-200 rounded-lg px-3 py-1.5"
-          placeholder="Lọc module (orders, products...)"
+          placeholder="Module (vd: orders, products)"
           value={moduleFilter}
           onChange={(e) => setModuleFilter(e.target.value)}
         />
         <input
           className="text-sm border border-slate-200 rounded-lg px-3 py-1.5"
-          placeholder="Lọc action (create, update...)"
+          placeholder="Hành động (vd: update, create)"
           value={actionFilter}
           onChange={(e) => setActionFilter(e.target.value)}
         />
         <input
+          className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 min-w-[200px]"
+          placeholder="Email người thao tác (lọc)"
+          value={userFilter}
+          onChange={(e) => setUserFilter(e.target.value)}
+        />
+        <input
           className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 min-w-[220px]"
-          placeholder="Tìm theo email/module/action/target"
+          placeholder="Tìm nhanh (module / action / target / email)"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -57,11 +78,11 @@ export default function AdminAuditLogsPage() {
         headers={[
           { key: "id", label: "ID" },
           { key: "createdAt", label: "Thời gian" },
-          { key: "user", label: "User" },
+          { key: "user", label: "Người thực hiện" },
           { key: "module", label: "Module" },
-          { key: "action", label: "Action" },
-          { key: "target", label: "Target" },
-          { key: "metadata", label: "Metadata" },
+          { key: "action", label: "Hành động" },
+          { key: "target", label: "Đối tượng" },
+          { key: "metadata", label: "Chi tiết (JSON)" },
         ]}
       >
         {query.isLoading ? (
@@ -74,7 +95,9 @@ export default function AdminAuditLogsPage() {
               <td className="px-3 py-2.5">{r.userEmail || `#${r.userId || "-"}`}</td>
               <td className="px-3 py-2.5">{r.module}</td>
               <td className="px-3 py-2.5">{r.action}</td>
-              <td className="px-3 py-2.5">{r.targetType}:{r.targetId}</td>
+              <td className="px-3 py-2.5">
+                {[r.targetType, r.targetId].filter(Boolean).join(":") || "—"}
+              </td>
               <td className="px-3 py-2.5 text-xs text-slate-600 max-w-[340px]">
                 {r.metadata ? <pre className="whitespace-pre-wrap break-words">{JSON.stringify(r.metadata, null, 2)}</pre> : "—"}
               </td>
@@ -83,7 +106,7 @@ export default function AdminAuditLogsPage() {
         )}
         {!query.isLoading && records.length === 0 ? <EmptyRow colSpan={7} text="Chưa có log." /> : null}
       </TableShell>
-      {query.isError ? <div className="mt-3"><ErrorBox text={query.error?.message || "Không tải được audit logs"} /></div> : null}
+      {query.isError ? <div className="mt-3"><ErrorBox text={query.error?.message || "Không tải được nhật ký"} /></div> : null}
       <PaginationBar
         page={pagination.page || 1}
         totalPages={pagination.totalPages || 1}

@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import PageHeader from "../components/common/PageHeader";
 import { useAuth } from "../../../context/AuthContext";
 import { getPricingSettings, patchPricingSettings } from "../services/adminPricing.service";
+import { getStorefrontSettings, patchStorefrontSettings } from "../services/adminStorefront.service";
 import { normalizeRole } from "../utils/rbac";
 
 const ROUNDING_OPTIONS = [
@@ -19,10 +20,18 @@ export default function AdminSettingsPage() {
   const isSuper = normalizeRole(user?.role) === "admin";
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingStore, setSavingStore] = useState(false);
   const [form, setForm] = useState({
     default_vat_rate: 10,
     default_rounding_rule: "round_nearest_1000",
     psychological_suffix: 990,
+  });
+  const [storeForm, setStoreForm] = useState({
+    default_shipping_fee: 50_000,
+    free_shipping_threshold: 10_000_000,
+    default_fulfillment: "pickup",
+    footer_hotline: "1900 630 680",
+    footer_email: "lapstore@gmail.com",
   });
 
   useEffect(() => {
@@ -30,12 +39,20 @@ export default function AdminSettingsPage() {
       setLoading(false);
       return;
     }
-    getPricingSettings(token)
-      .then((data) => {
-        setForm((f) => ({ ...f, ...data }));
+    let cancelled = false;
+    Promise.all([getPricingSettings(token), getStorefrontSettings(token)])
+      .then(([pricing, storefront]) => {
+        if (cancelled) return;
+        setForm((f) => ({ ...f, ...pricing }));
+        setStoreForm((f) => ({ ...f, ...storefront }));
       })
-      .catch(() => toast.error("Không tải được cấu hình giá"))
-      .finally(() => setLoading(false));
+      .catch(() => toast.error("Không tải được cấu hình hệ thống"))
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [token, isSuper]);
 
   const onSavePricing = async (e) => {
@@ -59,9 +76,35 @@ export default function AdminSettingsPage() {
     }
   };
 
+  const onSaveStorefront = async (e) => {
+    e.preventDefault();
+    setSavingStore(true);
+    try {
+      const next = await patchStorefrontSettings(
+        {
+          default_shipping_fee: Number(storeForm.default_shipping_fee) || 0,
+          free_shipping_threshold: Number(storeForm.free_shipping_threshold) || 0,
+          default_fulfillment: storeForm.default_fulfillment === "delivery" ? "delivery" : "pickup",
+          footer_hotline: String(storeForm.footer_hotline || "").trim(),
+          footer_email: String(storeForm.footer_email || "").trim(),
+        },
+        token
+      );
+      setStoreForm((f) => ({ ...f, ...next }));
+      toast.success("Đã lưu cài đặt cửa hàng & vận chuyển");
+    } catch (err) {
+      toast.error(err.message || "Lưu thất bại");
+    } finally {
+      setSavingStore(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <PageHeader title="Cài đặt hệ thống" subtitle="Cấu hình mặc định cho tính giá và VAT (áp dụng khi tạo phiên bản mới)." />
+      <PageHeader
+        title="Cài đặt hệ thống"
+        subtitle="Cấu hình giá, vận chuyển và thông tin liên hệ hiển thị trên website."
+      />
 
       {!isSuper ? (
         <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-4 text-sm">
@@ -115,14 +158,69 @@ export default function AdminSettingsPage() {
         </form>
       ) : null}
 
-      <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-2 text-sm text-slate-600">
-        <p className="font-medium text-slate-800">Các nhóm cài đặt khác</p>
-        <ul className="list-disc pl-5 space-y-1">
-          <li>Email / thông báo</li>
-          <li>Tham số đơn hàng và vận chuyển</li>
-          <li>Bảo mật và phiên đăng nhập</li>
-        </ul>
-      </div>
+      {isSuper ? (
+        <form onSubmit={onSaveStorefront} className="bg-white border border-slate-200 rounded-xl p-4 space-y-4 max-w-lg">
+          <h3 className="text-sm font-semibold text-slate-800">Vận chuyển &amp; vận hành checkout</h3>
+          {loading ? <p className="text-sm text-slate-500">Đang tải…</p> : null}
+          <div>
+            <label className="text-xs font-medium text-slate-600">Phí vận chuyển mặc định (₫, khi chưa đủ ngưỡng freeship)</label>
+            <input
+              type="number"
+              min={0}
+              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
+              value={storeForm.default_shipping_fee}
+              onChange={(e) => setStoreForm((f) => ({ ...f, default_shipping_fee: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-slate-600">Ngưỡng miễn phí vận chuyển (₫)</label>
+            <input
+              type="number"
+              min={0}
+              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
+              value={storeForm.free_shipping_threshold}
+              onChange={(e) => setStoreForm((f) => ({ ...f, free_shipping_threshold: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-slate-600">Hình thức nhận hàng mặc định (trang thông tin nhận hàng)</label>
+            <select
+              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
+              value={storeForm.default_fulfillment === "delivery" ? "delivery" : "pickup"}
+              onChange={(e) => setStoreForm((f) => ({ ...f, default_fulfillment: e.target.value }))}
+            >
+              <option value="pickup">Nhận tại cửa hàng</option>
+              <option value="delivery">Giao tận nơi</option>
+            </select>
+          </div>
+          <h3 className="text-sm font-semibold text-slate-800 pt-2 border-t border-slate-100">Footer cửa hàng</h3>
+          <div>
+            <label className="text-xs font-medium text-slate-600">Hotline hiển thị</label>
+            <input
+              type="text"
+              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
+              value={storeForm.footer_hotline}
+              onChange={(e) => setStoreForm((f) => ({ ...f, footer_hotline: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-slate-600">Email liên hệ hiển thị</label>
+            <input
+              type="email"
+              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
+              value={storeForm.footer_email}
+              onChange={(e) => setStoreForm((f) => ({ ...f, footer_email: e.target.value }))}
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={savingStore || loading}
+            className="px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-semibold disabled:opacity-50"
+          >
+            {savingStore ? "Đang lưu…" : "Lưu cài đặt cửa hàng"}
+          </button>
+        </form>
+      ) : null}
     </div>
   );
 }

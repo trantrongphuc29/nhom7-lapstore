@@ -54,6 +54,7 @@ const authWriteRateLimit = rateLimit({
 
 app.use("/images", express.static("images"));
 
+app.use("/api/store-config", require("./src/routes/storeConfig.route"));
 app.use("/api/banners", require("./src/routes/banners.route"));
 app.use("/api/products", require("./src/routes/products.route"));
 app.use("/api/vouchers", require("./src/routes/vouchers.route"));

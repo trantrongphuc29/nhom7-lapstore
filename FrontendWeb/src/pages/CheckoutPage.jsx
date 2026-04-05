@@ -3,7 +3,8 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import Header from "../components/layout/Header";
 import Footer from "../components/layout/Footer";
 import { BACKEND_BASE_URL } from "../config/api";
-import { useCart, FREE_SHIPPING_THRESHOLD } from "../context/CartContext";
+import { useCart } from "../context/CartContext";
+import { useStoreConfig } from "../context/StoreConfigContext";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { fmtPrice } from "../utils/format";
@@ -15,6 +16,7 @@ import { createStorefrontOrder } from "../services/orders.service";
 
 export default function CheckoutPage() {
   const location = useLocation();
+  const { freeShippingThreshold } = useStoreConfig();
   const { items, totals, allInStock, clear, appliedVoucherCode, applyVoucherDiscount, clearVoucherDiscount } = useCart();
   const { isAuthenticated, token } = useAuth();
   const { success: toastSuccess, error: toastError } = useToast();
@@ -338,9 +340,9 @@ export default function CheckoutPage() {
                     {totals.shippingFee === 0 ? <span className="text-emerald-600 font-bold">FREE</span> : `${fmtPrice(totals.shippingFee)}₫`}
                   </span>
                 </div>
-                {totals.subtotal < FREE_SHIPPING_THRESHOLD && totals.subtotal > 0 ? (
+                {totals.subtotal < freeShippingThreshold && totals.subtotal > 0 ? (
                   <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-2 py-1.5">
-                    Miễn phí ship cho đơn từ {fmtPrice(FREE_SHIPPING_THRESHOLD)}₫.
+                    Miễn phí ship cho đơn từ {fmtPrice(freeShippingThreshold)}₫.
                   </p>
                 ) : null}
               </div>

@@ -1,6 +1,8 @@
 import React from 'react';
+import { useStoreConfig } from '../context/StoreConfigContext';
 
 const Footer = () => {
+  const { footerHotline, footerEmail } = useStoreConfig();
   return (
     <footer className="bg-white dark:bg-background-dark border-t border-slate-200 dark:border-slate-800 pt-12 pb-6">
       <div className="max-w-7xl mx-auto px-4">
@@ -26,10 +28,10 @@ const Footer = () => {
             <h3 className="font-bold mb-4">Liên hệ</h3>
             <ul className="space-y-3 text-sm text-slate-500 dark:text-slate-400">
               <li className="flex items-start gap-2">
-                <span>Hotline: 1900 630 680</span>
+                <span>Hotline: {footerHotline}</span>
               </li>
               <li className="flex items-start gap-2">
-                <span>Email: lapstore@gmail.com</span>
+                <span>Email: {footerEmail}</span>
               </li>
               <li className="flex items-start gap-2">
                 <span>Địa chỉ: 180 Cao Lỗ, Phường 4, Quận 8, TPHCM</span>

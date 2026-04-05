@@ -3,7 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import Header from "../components/layout/Header";
 import Footer from "../components/layout/Footer";
 import { API_ENDPOINTS, BACKEND_BASE_URL } from "../config/api";
-import { useCart, FREE_SHIPPING_THRESHOLD } from "../context/CartContext";
+import { useCart } from "../context/CartContext";
+import { useStoreConfig } from "../context/StoreConfigContext";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { fmtPrice } from "../utils/format";
@@ -31,6 +32,7 @@ function RadioCard({ name, value, checked, onChange, title, description, childre
 }
 
 export default function ShippingInfoPage() {
+  const { freeShippingThreshold, defaultFulfillment, ready: storeConfigReady } = useStoreConfig();
   const { items, totals, allInStock } = useCart();
   const { isAuthenticated, token, user } = useAuth();
   const { error: toastError } = useToast();
@@ -67,6 +69,13 @@ export default function ShippingInfoPage() {
       if (draft.shipAddress != null) setShipAddress(draft.shipAddress);
     }
   }, [items.length, navigate]);
+
+  useEffect(() => {
+    if (!storeConfigReady) return;
+    const draft = loadShippingDraft();
+    if (draft?.fulfillment) return;
+    setFulfillment(defaultFulfillment === "delivery" ? "delivery" : "pickup");
+  }, [storeConfigReady, defaultFulfillment]);
 
   useEffect(() => {
     if (!isAuthenticated || !token || prefilledFromAccount) return;
@@ -398,11 +407,11 @@ export default function ShippingInfoPage() {
                     {totals.shippingFee === 0 ? <span className="text-emerald-600 font-bold">Miễn phí</span> : `${fmtPrice(totals.shippingFee)}₫`}
                   </span>
                 </div>
-                {totals.subtotal < FREE_SHIPPING_THRESHOLD && totals.subtotal > 0 ? (
+                {totals.subtotal < freeShippingThreshold && totals.subtotal > 0 ? (
                   <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-2 py-1.5">
-                    Mua thêm {fmtPrice(FREE_SHIPPING_THRESHOLD - totals.subtotal)}₫ để được miễn phí vận chuyển.
+                    Mua thêm {fmtPrice(freeShippingThreshold - totals.subtotal)}₫ để được miễn phí vận chuyển.
                   </p>
-                ) : totals.shippingFee === 0 && totals.subtotal >= FREE_SHIPPING_THRESHOLD ? (
+                ) : totals.shippingFee === 0 && totals.subtotal >= freeShippingThreshold ? (
                   <p className="text-xs text-emerald-700 bg-emerald-50 rounded-lg px-2 py-1.5">Đơn hàng đủ điều kiện miễn phí vận chuyển.</p>
                 ) : null}
               </div>

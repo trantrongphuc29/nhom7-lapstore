@@ -42,19 +42,22 @@ async function getAuditLogs(query) {
     values.push(`%${userFilter}%`);
   }
   if (search) {
-    where += " AND (l.module LIKE ? OR l.action LIKE ? OR l.target_type LIKE ? OR l.target_id LIKE ? OR u.email LIKE ?) ";
+    where += " AND (l.module LIKE ? OR l.action LIKE ? OR l.target_type LIKE ? OR l.target_id LIKE ? OR COALESCE(u.email, '') LIKE ?) ";
     const kw = `%${search}%`;
     values.push(kw, kw, kw, kw, kw);
   }
+  const fromJoin = `
+    FROM admin_audit_logs l
+    LEFT JOIN users u ON u.id = l.user_id
+  `;
   let countRows;
   let rows;
   try {
-    [countRows] = await pool.query(`SELECT COUNT(*) AS total FROM admin_audit_logs l ${where}`, values);
+    [countRows] = await pool.query(`SELECT COUNT(*) AS total ${fromJoin} ${where}`, values);
     [rows] = await pool.query(
       `
         SELECT l.id, l.user_id AS userId, u.email AS userEmail, l.module, l.action, l.target_type AS targetType, l.target_id AS targetId, l.metadata, l.created_at AS createdAt
-        FROM admin_audit_logs l
-        LEFT JOIN users u ON u.id = l.user_id
+        ${fromJoin}
         ${where}
         ORDER BY l.id DESC
         LIMIT ? OFFSET ?

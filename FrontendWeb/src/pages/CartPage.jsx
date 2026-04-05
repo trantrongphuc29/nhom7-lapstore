@@ -3,7 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import Header from "../components/layout/Header";
 import Footer from "../components/layout/Footer";
 import { BACKEND_BASE_URL } from "../config/api";
-import { useCart, stockStatus, FREE_SHIPPING_THRESHOLD } from "../context/CartContext";
+import { useCart, stockStatus } from "../context/CartContext";
+import { useStoreConfig } from "../context/StoreConfigContext";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { fmtPrice } from "../utils/format";
@@ -21,6 +22,7 @@ function StockTag({ stock, qty }) {
 }
 
 export default function CartPage() {
+  const { freeShippingThreshold } = useStoreConfig();
   const { items, updateQuantity, removeLine, totals, allInStock } = useCart();
   const { isAuthenticated } = useAuth();
   const { error: toastError } = useToast();
@@ -217,9 +219,9 @@ export default function CartPage() {
                       {totals.shippingFee === 0 ? <span className="text-emerald-600 font-bold">FREE</span> : `${fmtPrice(totals.shippingFee)}₫`}
                     </span>
                   </div>
-                  {totals.subtotal < FREE_SHIPPING_THRESHOLD && totals.subtotal > 0 ? (
+                  {totals.subtotal < freeShippingThreshold && totals.subtotal > 0 ? (
                     <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-2 py-1.5">
-                      Mua thêm {fmtPrice(FREE_SHIPPING_THRESHOLD - totals.subtotal)}₫ để được freeship.
+                      Mua thêm {fmtPrice(freeShippingThreshold - totals.subtotal)}₫ để được freeship.
                     </p>
                   ) : null}
                 </div>

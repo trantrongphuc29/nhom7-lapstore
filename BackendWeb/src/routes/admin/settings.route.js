@@ -9,6 +9,8 @@ function buildAdminSettingsRouter(staffMiddlewares) {
   const router = express.Router();
   router.get("/settings/pricing", ...staffMiddlewares, asyncHandler(controller.getPricingSettings));
   router.patch("/settings/pricing", verifyToken, requireSuperAdmin(), asyncHandler(controller.patchPricingSettings));
+  router.get("/settings/storefront", ...staffMiddlewares, asyncHandler(controller.getStorefrontSettings));
+  router.patch("/settings/storefront", verifyToken, requireSuperAdmin(), asyncHandler(controller.patchStorefrontSettings));
   router.post("/pricing/preview", ...staffMiddlewares, validate(validatePricingPreview), asyncHandler(controller.postPricingPreview));
   return router;
 }
