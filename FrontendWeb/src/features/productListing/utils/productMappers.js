@@ -33,6 +33,19 @@ function buildSpecSummary(product) {
 
 const fmt = (price) => new Intl.NumberFormat("vi-VN").format(price);
 
+/** Mỗi màu một lần (giữ thứ tự) — tránh lặp khi nhiều phiên bản cùng màu. */
+function uniqueColorLabels(parts) {
+  const seen = new Set();
+  const out = [];
+  for (const raw of parts) {
+    const s = String(raw || "").trim();
+    if (!s || seen.has(s)) continue;
+    seen.add(s);
+    out.push(s);
+  }
+  return out;
+}
+
 function toStorefrontImageUrl(path) {
   if (!path) return null;
   return path.startsWith("http") ? path : `${BACKEND_BASE_URL}/${path}`;
@@ -50,7 +63,7 @@ export function mapProductToCard(product) {
     priceFormatted: product.min_price ? fmt(product.min_price) : "Liên hệ",
     specSummary: buildSpecSummary(product),
     min_discount: Number(product.min_discount) || 0,
-    colors: (product.colors || "").split("|").filter(Boolean),
+    colors: uniqueColorLabels((product.colors || "").split("|")),
     variantCount: Number(product.variant_count) || 0,
   };
 }

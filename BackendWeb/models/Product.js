@@ -97,7 +97,13 @@ class Product {
              MAX(ps.cpu) AS cpu, MAX(ps.screen_resolution) AS screen_resolution, MAX(ps.screen_technology) AS screen_technology,
              MIN(pv.ram) AS ram, MIN(pv.storage) AS storage,
              COUNT(DISTINCT pv.id) AS variant_count,
-             STRING_AGG(pv.color::text, '|' ORDER BY pv.color) AS colors,
+             (SELECT STRING_AGG(x.c, '|' ORDER BY x.c)
+              FROM (
+                SELECT DISTINCT TRIM(pv2.color::text) AS c
+                FROM product_variants pv2
+                WHERE pv2.product_id = p.id
+                  AND TRIM(COALESCE(pv2.color::text, '')) <> ''
+              ) x) AS colors,
              MAX(pam.sku) AS master_sku,
              MIN(NULLIF(TRIM(pv.sku), '')) AS first_variant_sku,
              COALESCE(MAX(pam.sku), MIN(NULLIF(TRIM(pv.sku), ''))) AS display_sku,
@@ -136,7 +142,13 @@ class Product {
              MAX(ps.cpu) AS cpu, MAX(ps.screen_resolution) AS screen_resolution, MAX(ps.screen_technology) AS screen_technology,
              MIN(pv.ram) AS ram, MIN(pv.storage) AS storage,
              COUNT(DISTINCT pv.id) AS variant_count,
-             STRING_AGG(pv.color::text, '|' ORDER BY pv.color) AS colors,
+             (SELECT STRING_AGG(x.c, '|' ORDER BY x.c)
+              FROM (
+                SELECT DISTINCT TRIM(pv2.color::text) AS c
+                FROM product_variants pv2
+                WHERE pv2.product_id = p.id
+                  AND TRIM(COALESCE(pv2.color::text, '')) <> ''
+              ) x) AS colors,
              MAX(pam.sku) AS master_sku,
              MIN(NULLIF(TRIM(pv.sku), '')) AS first_variant_sku,
              COALESCE(MAX(pam.sku), MIN(NULLIF(TRIM(pv.sku), ''))) AS display_sku,
