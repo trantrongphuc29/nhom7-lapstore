@@ -161,7 +161,7 @@ function CompareProductsPage() {
               <tr className="border-b border-slate-200">
                 <th
                   scope="col"
-                  className="text-left px-5 py-4 text-sm font-semibold text-slate-600 sticky top-16 left-0 z-30 w-[260px] min-w-[260px] max-w-[260px] bg-white border-r border-slate-200 shadow-[6px_0_14px_-8px_rgba(15,23,42,0.18)] align-top"
+                  className="text-center px-5 py-4 text-sm font-semibold text-slate-600 sticky top-16 left-0 z-30 w-[260px] min-w-[260px] max-w-[260px] bg-white border-r border-slate-200 shadow-[6px_0_14px_-8px_rgba(15,23,42,0.18)] align-middle"
                 >
                   Tiêu chí
                 </th>
@@ -232,7 +232,7 @@ function CompareProductsPage() {
                   <tr key={row.key} className="border-b border-slate-100 last:border-b-0 odd:bg-white even:bg-slate-50/50">
                     <th
                       scope="row"
-                      className={`px-5 py-3.5 text-sm font-semibold text-slate-700 align-top sticky left-0 z-10 w-[260px] min-w-[260px] max-w-[260px] border-r border-slate-200 shadow-[6px_0_14px_-8px_rgba(15,23,42,0.12)] ${labelBg} leading-relaxed`}
+                      className={`text-left px-5 py-3.5 text-sm font-semibold text-slate-700 align-top sticky left-0 z-10 w-[260px] min-w-[260px] max-w-[260px] border-r border-slate-200 shadow-[6px_0_14px_-8px_rgba(15,23,42,0.12)] ${labelBg} leading-relaxed`}
                     >
                       <span className="block pr-1">{row.label}</span>
                     </th>
