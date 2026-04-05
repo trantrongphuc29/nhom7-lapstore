@@ -4,6 +4,7 @@ import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import { useAuth } from '../../context/AuthContext';
 import { API_ENDPOINTS, BACKEND_BASE_URL } from '../../config/api';
+import { getJson } from '../../services/apiClient';
 
 function greetingText() {
   const h = new Date().getHours();
@@ -42,15 +43,14 @@ export default function AccountLayout() {
     (async () => {
       if (!token) return;
       try {
-        const res = await fetch(API_ENDPOINTS.ACCOUNT_PROFILE, {
+        const json = await getJson(API_ENDPOINTS.ACCOUNT_PROFILE, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        const json = await res.json();
-        if (!res.ok || cancelled) return;
+        if (cancelled) return;
         const p = json?.data || json;
         setProfileName(p?.fullName || '');
       } catch {
-        // Ignore; fallback name from auth context.
+        // 401 → notifyUnauthorizedSession; hoặc lỗi mạng — dùng tên từ AuthContext.
       }
     })();
     return () => {

@@ -13,6 +13,7 @@ const {
   suggestProductSku,
 } = require("../utils/sku");
 const { slugify } = require("../utils/slug");
+const { syncSerialSequenceToMax } = require("../utils/pgSequence");
 
 async function getAdminProducts(query) {
   const page = Math.max(1, Number(query.page) || 1);
@@ -130,6 +131,13 @@ function mapMysqlDuplicateToAppError(error) {
   if (hay.includes("product_admin_meta") && hay.includes("slug")) {
     return new AppError("Slug đã tồn tại trên sản phẩm khác", 409, "SLUG_CONFLICT");
   }
+  if (hay.includes("brands_pkey") || (hay.includes("brands") && hay.includes("pkey"))) {
+    return new AppError(
+      "Không thể tạo thương hiệu (lỗi id trùng). Hãy thử lại; nếu vẫn lỗi, cần đồng bộ sequence trên database.",
+      409,
+      "CONFLICT"
+    );
+  }
   if (hay.includes("brands")) {
     return new AppError("Thương hiệu trùng tên hoặc slug trong hệ thống", 409, "CONFLICT");
   }
@@ -158,6 +166,7 @@ async function resolveBrandId(conn, brandName) {
   const [[bySlug]] = await conn.query("SELECT id FROM brands WHERE slug = ? LIMIT 1", [slug]);
   if (bySlug?.id) return bySlug.id;
 
+  await syncSerialSequenceToMax(conn, "brands", "id");
   const [ins] = await conn.query(
     `
       INSERT INTO brands (name, slug, logo_url, sort_order, is_active)

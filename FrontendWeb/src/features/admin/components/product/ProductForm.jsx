@@ -111,6 +111,29 @@ export default function ProductForm({
     [initialValues]
   );
 
+  /** Khi đã có danh sách brands: map brandId / tên → đúng `option value` (tên trong DB). */
+  const resolvedBrandForForm = useMemo(() => {
+    if (!initialValues?.id) return "";
+    const bid = initialValues.brandId != null ? Number(initialValues.brandId) : NaN;
+    if (Array.isArray(brands) && brands.length > 0 && Number.isFinite(bid) && bid > 0) {
+      const row = brands.find((b) => Number(b.id) === bid);
+      if (row?.name) return row.name;
+    }
+    if (Array.isArray(brands) && brands.length > 0) {
+      const raw = String(initialValues.brand ?? "").trim();
+      if (raw) {
+        const norm = raw.toLowerCase();
+        const row = brands.find((b) => {
+          const name = String(b?.name || "").trim().toLowerCase();
+          const slug = String(b?.slug || "").trim().toLowerCase();
+          return name === norm || slug === norm;
+        });
+        if (row?.name) return row.name;
+      }
+    }
+    return String(initialValues.brand ?? "").trim();
+  }, [initialValues, brands]);
+
   const { register, control, handleSubmit, watch, formState: { errors }, reset, setValue } = useForm({
     resolver: zodResolver(schema),
     defaultValues,
@@ -148,7 +171,10 @@ export default function ProductForm({
   }, [slugWatched, setValue]);
 
   useEffect(() => {
-    reset(defaultValues);
+    reset({
+      ...defaultValues,
+      brand: initialValues?.id ? resolvedBrandForForm : defaultValues.brand,
+    });
     const merged =
       Array.isArray(initialValues?.variants) && initialValues.variants.length > 0
         ? mergeLoadedVariants(initialValues.variants)
@@ -157,7 +183,7 @@ export default function ProductForm({
     setSpecs(mergeLoadedSpecs(initialValues?.specs));
     setExistingImageUrls(initialValues?.imageUrls || []);
     initialRetailSig.current = retailSignature(merged);
-  }, [defaultValues, initialValues, reset]);
+  }, [defaultValues, initialValues, reset, resolvedBrandForForm]);
 
   useEffect(() => {
     let mounted = true;
@@ -171,29 +197,6 @@ export default function ProductForm({
       mounted = false;
     };
   }, [token]);
-
-  useEffect(() => {
-    if (!Array.isArray(brands) || brands.length === 0) return;
-    const bid = initialValues?.brandId != null ? Number(initialValues.brandId) : null;
-    if (Number.isFinite(bid) && bid > 0) {
-      const byId = brands.find((b) => Number(b.id) === bid);
-      if (byId?.name) {
-        setValue("brand", byId.name, { shouldValidate: true, shouldDirty: false });
-        return;
-      }
-    }
-    const raw = String(initialValues?.brand ?? "").trim();
-    if (!raw) return;
-    const norm = raw.toLowerCase();
-    const matched = brands.find((b) => {
-      const name = String(b?.name || "").trim().toLowerCase();
-      const slug = String(b?.slug || "").trim().toLowerCase();
-      return name === norm || slug === norm;
-    });
-    if (matched?.name) {
-      setValue("brand", matched.name, { shouldValidate: true, shouldDirty: false });
-    }
-  }, [brands, initialValues?.brand, initialValues?.brandId, initialValues?.id, setValue]);
 
   const handleSuggestProductSku = async () => {
     const name = watch("name");
@@ -293,7 +296,11 @@ export default function ProductForm({
         </div>
         <div>
           <label className="text-sm font-medium">Thương hiệu *</label>
-          <select {...register("brand")} className="mt-1 w-full border rounded-lg px-3 py-2 text-sm">
+          <select
+            key={`brand-${initialValues?.id ?? "new"}-${brands.length}`}
+            {...register("brand")}
+            className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
+          >
             <option value="">Chọn thương hiệu</option>
             {initialValues?.brand &&
             !brands.some(

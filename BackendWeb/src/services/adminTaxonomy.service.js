@@ -2,6 +2,7 @@ const pool = require("../../config/database");
 const AppError = require("../utils/AppError");
 const { createAuditLog } = require("./adminAudit.service");
 const { slugify } = require("../utils/slug");
+const { syncSerialSequenceToMax } = require("../utils/pgSequence");
 
 async function getBrands() {
   const [rows] = await pool.query(
@@ -42,6 +43,7 @@ async function createBrand(payload, actorId = null) {
   if (!name || !slug) throw new AppError("name and slug are required", 400, "VALIDATION_ERROR");
   const [[dup]] = await pool.query(`SELECT id FROM brands WHERE name = ? OR slug = ? LIMIT 1`, [name, slug]);
   if (dup) throw new AppError("Tên hoặc slug thương hiệu đã tồn tại", 409, "DUPLICATE_BRAND");
+  await syncSerialSequenceToMax(pool, "brands", "id");
   const [result] = await pool.query(
     `
       INSERT INTO brands (name, slug, logo_url, sort_order, is_active)

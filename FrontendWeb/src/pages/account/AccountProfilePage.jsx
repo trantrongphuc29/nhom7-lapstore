@@ -2,6 +2,16 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { API_ENDPOINTS } from '../../config/api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import { getJson, patchJson, postJson } from '../../services/apiClient';
+
+function authOpts(token) {
+  return { headers: { Authorization: `Bearer ${token}` } };
+}
+
+function isAuthFailureMessage(msg) {
+  const m = String(msg || '').toLowerCase();
+  return m.includes('invalid or expired token') || m.includes('authentication required') || m.includes('unauthorized');
+}
 
 function FieldIcon({ children }) {
   return (
@@ -32,13 +42,12 @@ export default function AccountProfilePage() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (!token) return;
+      if (!token) {
+        setLoading(false);
+        return;
+      }
       try {
-        const res = await fetch(API_ENDPOINTS.ACCOUNT_PROFILE, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message || 'Không tải được hồ sơ');
+        const data = await getJson(API_ENDPOINTS.ACCOUNT_PROFILE, authOpts(token));
         const p = data?.data || data;
         if (!cancelled) {
           const fn = p.fullName || '';
@@ -49,7 +58,9 @@ export default function AccountProfilePage() {
           setBaseline({ fullName: fn, phone: ph });
         }
       } catch (e) {
-        if (!cancelled) toastError(e.message || 'Lỗi tải hồ sơ');
+        if (!cancelled && !isAuthFailureMessage(e?.message)) {
+          toastError(e.message || 'Lỗi tải hồ sơ');
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -64,20 +75,20 @@ export default function AccountProfilePage() {
     if (!token || !dirty) return;
     setSaving(true);
     try {
-      const res = await fetch(API_ENDPOINTS.ACCOUNT_PROFILE, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fullName: fullName.trim(), phone: phone.trim() }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Cập nhật thất bại');
+      await patchJson(
+        API_ENDPOINTS.ACCOUNT_PROFILE,
+        { fullName: fullName.trim(), phone: phone.trim() },
+        authOpts(token)
+      );
       await refreshUser();
       const nextFn = fullName.trim();
       const nextPh = phone.trim();
       setBaseline({ fullName: nextFn, phone: nextPh });
       toastSuccess('Đã lưu thông tin');
     } catch (err) {
-      toastError(err.message || 'Cập nhật thất bại');
+      if (!isAuthFailureMessage(err?.message)) {
+        toastError(err.message || 'Cập nhật thất bại');
+      }
     } finally {
       setSaving(false);
     }
@@ -96,22 +107,22 @@ export default function AccountProfilePage() {
       return;
     }
     try {
-      const res = await fetch(API_ENDPOINTS.ACCOUNT_PASSWORD, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      await postJson(
+        API_ENDPOINTS.ACCOUNT_PASSWORD,
+        {
           currentPassword: pwd.current,
           newPassword: pwd.next,
           confirmPassword: pwd.confirm,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Đổi mật khẩu thất bại');
+        },
+        authOpts(token)
+      );
       toastSuccess('Đã đổi mật khẩu');
       setPwdOpen(false);
       setPwd({ current: '', next: '', confirm: '' });
     } catch (err) {
-      toastError(err.message || 'Đổi mật khẩu thất bại');
+      if (!isAuthFailureMessage(err?.message)) {
+        toastError(err.message || 'Đổi mật khẩu thất bại');
+      }
     }
   };
 

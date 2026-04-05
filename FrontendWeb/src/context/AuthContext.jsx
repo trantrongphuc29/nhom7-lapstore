@@ -1,18 +1,37 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { API_ENDPOINTS } from '../config/api';
-import { AUTH_UNAUTHORIZED_EVENT } from '../utils/authSession';
+import { AUTH_UNAUTHORIZED_EVENT, sanitizeStoredToken } from '../utils/authSession';
 
 const AuthContext = createContext(null);
 const TOKEN_KEY = 'lapstore_auth_token';
 const USER_KEY = 'lapstore_auth_user';
 
+function readStoredUser() {
+  const raw = localStorage.getItem(USER_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(localStorage.getItem(TOKEN_KEY) || '');
+  const [token, setToken] = useState(() => sanitizeStoredToken(localStorage.getItem(TOKEN_KEY)));
   const [user, setUser] = useState(() => {
-    const raw = localStorage.getItem(USER_KEY);
-    return raw ? JSON.parse(raw) : null;
+    const clean = sanitizeStoredToken(localStorage.getItem(TOKEN_KEY));
+    if (!clean) return null;
+    return readStoredUser();
   });
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const raw = localStorage.getItem(TOKEN_KEY);
+    if (raw && !sanitizeStoredToken(raw)) {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+    }
+  }, []);
 
   useEffect(() => {
     if (token) {
@@ -31,9 +50,10 @@ export function AuthProvider({ children }) {
   }, [user]);
 
   const refreshUser = useCallback(async () => {
-    if (!token) return null;
+    const t = sanitizeStoredToken(token);
+    if (!t) return null;
     try {
-      const res = await fetch(API_ENDPOINTS.AUTH_ME, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(API_ENDPOINTS.AUTH_ME, { headers: { Authorization: `Bearer ${t}` } });
       if (res.status === 401) {
         setToken('');
         setUser(null);
@@ -60,10 +80,11 @@ export function AuthProvider({ children }) {
   }, [token]);
 
   useEffect(() => {
-    if (!token) return undefined;
+    const t = sanitizeStoredToken(token);
+    if (!t) return undefined;
     const ac = new AbortController();
     fetch(API_ENDPOINTS.AUTH_ME, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${t}` },
       signal: ac.signal,
     })
       .then((res) => {
@@ -121,7 +142,7 @@ export function AuthProvider({ children }) {
       if (!nextToken || typeof nextToken !== 'string') {
         throw new Error('Phản hồi đăng nhập không hợp lệ (thiếu token). Kiểm tra API backend.');
       }
-      setToken(nextToken);
+      setToken(sanitizeStoredToken(nextToken));
       setUser(payload.user ?? null);
       return payload.user;
     } finally {
