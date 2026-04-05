@@ -16,8 +16,9 @@ function buildQuery(filters) {
   return params.toString();
 }
 
-function sortProducts(records, sort) {
+function sortProducts(records, sort, filters = {}) {
   const result = [...records];
+  const hasKeyword = Boolean(filters.keyword && String(filters.keyword).trim());
   switch (sort) {
     case "price-asc":
       result.sort((a, b) => a.min_price - b.min_price);
@@ -26,6 +27,7 @@ function sortProducts(records, sort) {
       result.sort((a, b) => b.min_price - a.min_price);
       break;
     case "newest":
+      if (hasKeyword) break;
       result.sort((a, b) => b.id - a.id);
       break;
     default:
@@ -41,5 +43,5 @@ export async function getProductsByFilters(filters) {
   const data = await res.json();
   const payload = data?.data || data;
   const records = Array.isArray(payload.records) ? payload.records : [];
-  return sortProducts(records, filters.sort);
+  return sortProducts(records, filters.sort, filters);
 }

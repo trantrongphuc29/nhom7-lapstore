@@ -10,6 +10,75 @@ const PRICE_BANDS = {
   over40: { min: 40_000_000, max: null },
 };
 
+function normalizeSearchKeyword(raw) {
+  return String(raw || "")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+/** Tách từ khóa thành token (AND giữa các token). */
+function tokenizeSearchKeyword(raw) {
+  const n = normalizeSearchKeyword(raw);
+  if (!n) return [];
+  return n.split(/\s+/).filter((t) => t.length > 0);
+}
+
+/**
+ * Mỗi token phải khớp ít nhất một trường (OR nội bộ); nhiều token = AND.
+ * ILIKE: không phân biệt hoa thường (PostgreSQL).
+ */
+function buildKeywordFilterSql(values, keyword) {
+  const tokens = tokenizeSearchKeyword(keyword);
+  let sql = "";
+  for (const token of tokens) {
+    const pat = `%${token}%`;
+    sql += ` AND (
+      p.name ILIKE ? OR
+      p.brand ILIKE ? OR
+      COALESCE(p.description, '') ILIKE ? OR
+      COALESCE(pam.sku, '') ILIKE ? OR
+      COALESCE(pam.slug, '') ILIKE ? OR
+      COALESCE(ps.cpu, '') ILIKE ? OR
+      COALESCE(ps.gpu_onboard, '') ILIKE ? OR
+      COALESCE(ps.gpu_discrete, '') ILIKE ? OR
+      COALESCE(ps.ram, '') ILIKE ? OR
+      COALESCE(ps.storage, '') ILIKE ? OR
+      EXISTS (
+        SELECT 1 FROM product_variants pv_kw
+        WHERE pv_kw.product_id = p.id AND (
+          COALESCE(pv_kw.sku, '') ILIKE ? OR
+          COALESCE(pv_kw.ram, '') ILIKE ? OR
+          COALESCE(pv_kw.storage, '') ILIKE ? OR
+          COALESCE(pv_kw.version::text, '') ILIKE ? OR
+          COALESCE(pv_kw.color::text, '') ILIKE ?
+        )
+      )
+    )`;
+    for (let i = 0; i < 15; i += 1) values.push(pat);
+  }
+  return sql;
+}
+
+/** Ưu tiên: khớp đúng tên (không wildcard) → tiền tố tên/brand → chứa tên/brand. */
+function buildKeywordOrderSql(values, keyword) {
+  const nk = normalizeSearchKeyword(keyword);
+  if (!nk) return " ORDER BY p.created_at DESC";
+  const exact = nk;
+  const pref = `${nk}%`;
+  const cont = `%${nk}%`;
+  values.push(exact, pref, pref, cont, cont);
+  return ` ORDER BY (
+    CASE
+      WHEN p.name ILIKE ? THEN 0
+      WHEN p.name ILIKE ? THEN 1
+      WHEN p.brand ILIKE ? THEN 2
+      WHEN p.name ILIKE ? THEN 3
+      WHEN p.brand ILIKE ? THEN 4
+      ELSE 5
+    END
+  ) ASC, p.created_at DESC`;
+}
+
 class Product {
   constructor(data = {}) {
     this.id = data.id;
@@ -56,7 +125,11 @@ class Product {
 
   // Tìm kiếm với filter (dùng JOIN sang specs và variants)
   static async search(filters = {}) {
-    const { keyword, brands, cpu, ram, storage, minPrice, maxPrice, priceRanges } = filters;
+    const { brands, cpu, ram, storage, minPrice, maxPrice, priceRanges } = filters;
+    const keyword =
+      filters.keyword != null && String(filters.keyword).trim() !== ""
+        ? normalizeSearchKeyword(filters.keyword)
+        : null;
     let query = `
       SELECT p.id, p.name, p.brand, p.description, p.created_at,
              MIN(pv.price) AS min_price, MAX(pv.discount) AS min_discount,
@@ -90,25 +163,22 @@ class Product {
     const values = [];
 
     if (keyword) {
-      const kw = `%${keyword}%`;
-      query +=
-        ' AND (p.name LIKE ? OR pam.sku LIKE ? OR EXISTS (SELECT 1 FROM product_variants pv3 WHERE pv3.product_id = p.id AND pv3.sku LIKE ?))';
-      values.push(kw, kw, kw);
+      query += buildKeywordFilterSql(values, keyword);
     }
     if (brands && brands.length > 0) {
       query += ` AND p.brand IN (${brands.map(() => '?').join(',')})`;
       values.push(...brands);
     }
     if (cpu) {
-      query += ' AND ps.cpu LIKE ?';
+      query += " AND ps.cpu ILIKE ?";
       values.push(`%${cpu}%`);
     }
     if (ram) {
-      query += ' AND pv.ram LIKE ?';
+      query += " AND pv.ram ILIKE ?";
       values.push(`%${ram}%`);
     }
     if (storage) {
-      query += ' AND pv.storage LIKE ?';
+      query += " AND pv.storage ILIKE ?";
       values.push(`%${storage}%`);
     }
     if (priceRanges && priceRanges.length > 0) {
@@ -141,7 +211,8 @@ class Product {
       }
     }
 
-    query += ' GROUP BY p.id, p.name, p.brand, p.description, p.created_at ORDER BY p.created_at DESC';
+    query += " GROUP BY p.id, p.name, p.brand, p.description, p.created_at";
+    query += keyword ? buildKeywordOrderSql(values, keyword) : " ORDER BY p.created_at DESC";
     const [rows] = await pool.query(query, values);
     return rows;
   }
