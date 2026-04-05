@@ -32,7 +32,7 @@ function RadioCard({ name, value, checked, onChange, title, description, childre
 }
 
 export default function ShippingInfoPage() {
-  const { freeShippingThreshold, defaultFulfillment, ready: storeConfigReady } = useStoreConfig();
+  const { freeShippingThreshold } = useStoreConfig();
   const { items, totals, allInStock } = useCart();
   const { isAuthenticated, token, user } = useAuth();
   const { error: toastError } = useToast();
@@ -69,13 +69,6 @@ export default function ShippingInfoPage() {
       if (draft.shipAddress != null) setShipAddress(draft.shipAddress);
     }
   }, [items.length, navigate]);
-
-  useEffect(() => {
-    if (!storeConfigReady) return;
-    const draft = loadShippingDraft();
-    if (draft?.fulfillment) return;
-    setFulfillment(defaultFulfillment === "delivery" ? "delivery" : "pickup");
-  }, [storeConfigReady, defaultFulfillment]);
 
   useEffect(() => {
     if (!isAuthenticated || !token || prefilledFromAccount) return;

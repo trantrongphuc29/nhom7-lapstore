@@ -29,7 +29,6 @@ export default function AdminSettingsPage() {
   const [storeForm, setStoreForm] = useState({
     default_shipping_fee: 50_000,
     free_shipping_threshold: 10_000_000,
-    default_fulfillment: "pickup",
     footer_hotline: "1900 630 680",
     footer_email: "lapstore@gmail.com",
   });
@@ -84,7 +83,6 @@ export default function AdminSettingsPage() {
         {
           default_shipping_fee: Number(storeForm.default_shipping_fee) || 0,
           free_shipping_threshold: Number(storeForm.free_shipping_threshold) || 0,
-          default_fulfillment: storeForm.default_fulfillment === "delivery" ? "delivery" : "pickup",
           footer_hotline: String(storeForm.footer_hotline || "").trim(),
           footer_email: String(storeForm.footer_email || "").trim(),
         },
@@ -160,7 +158,7 @@ export default function AdminSettingsPage() {
 
       {isSuper ? (
         <form onSubmit={onSaveStorefront} className="bg-white border border-slate-200 rounded-xl p-4 space-y-4 max-w-lg">
-          <h3 className="text-sm font-semibold text-slate-800">Vận chuyển &amp; vận hành checkout</h3>
+          <h3 className="text-sm font-semibold text-slate-800">Vận chuyển</h3>
           {loading ? <p className="text-sm text-slate-500">Đang tải…</p> : null}
           <div>
             <label className="text-xs font-medium text-slate-600">Phí vận chuyển mặc định (₫, khi chưa đủ ngưỡng freeship)</label>
@@ -181,17 +179,6 @@ export default function AdminSettingsPage() {
               value={storeForm.free_shipping_threshold}
               onChange={(e) => setStoreForm((f) => ({ ...f, free_shipping_threshold: e.target.value }))}
             />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-slate-600">Hình thức nhận hàng mặc định (trang thông tin nhận hàng)</label>
-            <select
-              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm"
-              value={storeForm.default_fulfillment === "delivery" ? "delivery" : "pickup"}
-              onChange={(e) => setStoreForm((f) => ({ ...f, default_fulfillment: e.target.value }))}
-            >
-              <option value="pickup">Nhận tại cửa hàng</option>
-              <option value="delivery">Giao tận nơi</option>
-            </select>
           </div>
           <h3 className="text-sm font-semibold text-slate-800 pt-2 border-t border-slate-100">Footer cửa hàng</h3>
           <div>

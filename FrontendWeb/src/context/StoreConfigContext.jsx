@@ -4,7 +4,6 @@ import { API_ENDPOINTS } from "../config/api";
 const FALLBACK = {
   defaultShippingFee: 50_000,
   freeShippingThreshold: 10_000_000,
-  defaultFulfillment: "pickup",
   footerHotline: "1900 630 680",
   footerEmail: "lapstore@gmail.com",
 };
@@ -27,7 +26,6 @@ export function StoreConfigProvider({ children }) {
         setConfig({
           defaultShippingFee: Number(d.defaultShippingFee) || FALLBACK.defaultShippingFee,
           freeShippingThreshold: Number(d.freeShippingThreshold) || FALLBACK.freeShippingThreshold,
-          defaultFulfillment: d.defaultFulfillment === "delivery" ? "delivery" : "pickup",
           footerHotline: String(d.footerHotline || FALLBACK.footerHotline),
           footerEmail: String(d.footerEmail || FALLBACK.footerEmail),
         });
