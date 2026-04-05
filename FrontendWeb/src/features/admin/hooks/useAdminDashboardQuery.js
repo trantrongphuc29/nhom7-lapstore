@@ -6,7 +6,7 @@ import { getAdminDashboardOverview } from "../services/adminDashboard.service";
 export function useAdminDashboardQuery() {
   const { token, isAuthenticated, user } = useAuth();
   return useQuery({
-    queryKey: ["admin-dashboard-overview"],
+    queryKey: ["admin-dashboard-overview", token],
     queryFn: () => getAdminDashboardOverview(token),
     enabled: Boolean(isAuthenticated && token && isStaffRole(user?.role)),
     staleTime: 20 * 1000,

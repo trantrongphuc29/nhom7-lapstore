@@ -204,8 +204,8 @@ export default function AdminDashboardOverviewPage() {
         {canViewRevenue ? (
           <div className="xl:col-span-2 min-w-0 bg-white border border-slate-200 rounded-xl p-4">
             <h3 className="text-sm font-semibold text-slate-700 mb-3">Doanh thu theo thời gian</h3>
-            <div className="h-[320px] w-full overflow-hidden">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="h-[320px] w-full min-h-0 min-w-0 overflow-hidden">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                 <LineChart data={chartData} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="day" tick={{ fontSize: 12 }} minTickGap={24} />
@@ -248,7 +248,7 @@ export default function AdminDashboardOverviewPage() {
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-6">
         {canViewRevenue ? (
-          <div className="bg-white border border-slate-200 rounded-xl p-4">
+          <div className="bg-white border border-slate-200 rounded-xl p-4 min-w-0">
             <h3 className="text-sm font-semibold text-slate-700 mb-3">Top 5 theo doanh thu</h3>
             <div className="space-y-2 text-sm">
               {topByRevenue.length === 0 ? <p className="text-slate-500">Chưa có dữ liệu.</p> : null}
@@ -259,8 +259,8 @@ export default function AdminDashboardOverviewPage() {
                 </div>
               ))}
             </div>
-            <div className="h-[160px] mt-4">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="h-[160px] mt-4 min-h-0 min-w-0">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                 <BarChart data={topByRevenue}>
                   <XAxis hide dataKey="name" />
                   <YAxis hide />

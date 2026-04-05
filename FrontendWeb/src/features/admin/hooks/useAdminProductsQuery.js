@@ -6,7 +6,7 @@ import { getAdminProducts } from "../services/adminProducts.service";
 export function useAdminProductsQuery(params) {
   const { token, user } = useAuth();
   return useQuery({
-    queryKey: ["admin-products", params],
+    queryKey: ["admin-products", token, params],
     queryFn: () => getAdminProducts(params, token),
     enabled: Boolean(token && isStaffRole(user?.role)),
     keepPreviousData: true,

@@ -117,8 +117,12 @@ export function AuthProvider({ children }) {
         throw new Error(data.message || 'Login failed');
       }
       const payload = data?.data || data;
-      setToken(payload.token);
-      setUser(payload.user);
+      const nextToken = payload?.token;
+      if (!nextToken || typeof nextToken !== 'string') {
+        throw new Error('Phản hồi đăng nhập không hợp lệ (thiếu token). Kiểm tra API backend.');
+      }
+      setToken(nextToken);
+      setUser(payload.user ?? null);
       return payload.user;
     } finally {
       setIsLoading(false);
