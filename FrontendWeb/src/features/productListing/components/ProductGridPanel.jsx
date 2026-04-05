@@ -19,6 +19,7 @@ const ProductGridPanel = ({
   clearCompare,
   toast,
   setToast,
+  onOpenMobileFilters,
 }) => {
   const navigate = useNavigate();
   const selectedCompareProducts = compareIds.map((id) => products.find((p) => p.id === id)).filter(Boolean);
@@ -32,31 +33,52 @@ const ProductGridPanel = ({
 
   return (
     <section className={`flex-1 ${showCompareBar ? "pb-36" : ""}`}>
-      <div className="font-bold flex flex-wrap items-center justify-between gap-3 sm:gap-4 mb-6 bg-white border border-slate-200 p-4 rounded-2xl">
-        <div className="flex items-center gap-2 overflow-x-auto flex-wrap min-w-0 flex-1">
-          <span className="text-sm text-slate-500 whitespace-nowrap">Sắp xếp:</span>
+      <div className="mb-6 flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-3 font-bold sm:p-4">
+        <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <span className="shrink-0 whitespace-nowrap text-sm text-slate-500">Sắp xếp:</span>
           {SORT_OPTIONS.map((sort) => (
             <button
               key={sort.value}
+              type="button"
               onClick={() => setFilters({ ...filters, sort: sort.value })}
-              className={`px-3 py-1.5 text-xs rounded-lg whitespace-nowrap border transition ${filters.sort === sort.value ? "bg-slate-900 text-white border-slate-900" : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"}`}
+              className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs whitespace-nowrap transition ${
+                filters.sort === sort.value
+                  ? "border-slate-900 bg-slate-900 text-white"
+                  : "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200"
+              }`}
             >
               {sort.label}
             </button>
           ))}
           <button
+            type="button"
             onClick={() => setCompareMode((prev) => !prev)}
-            className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg border transition ${compareMode ? "bg-slate-900 text-white border-slate-900" : "bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200"}`}
+            className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-1.5 text-xs transition ${
+              compareMode
+                ? "border-slate-900 bg-slate-900 text-white"
+                : "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200"
+            }`}
           >
             <span>So sánh</span>
-            <span className={`relative w-9 h-5 rounded-full transition ${compareMode ? "bg-[#CCFF00]" : "bg-slate-300"}`}>
+            <span className={`relative h-5 w-9 rounded-full transition ${compareMode ? "bg-[#CCFF00]" : "bg-slate-300"}`}>
               <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition ${compareMode ? "left-4" : "left-0.5"}`} />
             </span>
           </button>
         </div>
+        {typeof onOpenMobileFilters === "function" ? (
+          <button
+            type="button"
+            onClick={onOpenMobileFilters}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm lg:hidden"
+            aria-label="Mở bộ lọc"
+          >
+            <span className="material-symbols-outlined text-[22px] leading-none">tune</span>
+            <span>Lọc</span>
+          </button>
+        ) : null}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3 lg:gap-6">
         {loading ? (
           Array.from({ length: skeletonSlots }).map((_, i) => (
             <div key={`sk-${i}`} className="space-y-2 h-full">
@@ -69,9 +91,14 @@ const ProductGridPanel = ({
               <ProductCard product={mapProductToCard(p)} />
               {compareMode ? (
                 <button
+                  type="button"
                   onClick={() => toggleCompareProduct(p.id)}
                   disabled={!compareIds.includes(p.id) && compareIds.length >= 3}
-                  className={`w-full rounded-xl px-3 py-2 text-sm font-semibold border transition ${compareIds.includes(p.id) ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"} disabled:opacity-50 disabled:cursor-not-allowed`}
+                  className={`w-full rounded-lg border px-2 py-1.5 text-xs font-semibold transition sm:rounded-xl sm:px-3 sm:py-2 sm:text-sm ${
+                    compareIds.includes(p.id)
+                      ? "border-slate-900 bg-slate-900 text-white"
+                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+                  } disabled:cursor-not-allowed disabled:opacity-50`}
                 >
                   {compareIds.includes(p.id) ? "Đã chọn so sánh" : "Chọn để so sánh"}
                 </button>

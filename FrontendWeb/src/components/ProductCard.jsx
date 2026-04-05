@@ -57,17 +57,17 @@ const ProductCard = ({ product }) => {
   return (
     <Link
       to={storefrontProductPath(product)}
-      className="bg-white rounded-2xl border border-slate-100 overflow-hidden hover:border-slate-50 hover:shadow-[0_10px_40px_-4px_rgba(15,23,42,0.12)] transition-[box-shadow,border-color] duration-200 relative flex flex-col h-[490px] max-h-[490px]"
+      className="relative flex h-full min-h-[280px] flex-col overflow-hidden rounded-xl border border-slate-100 bg-white transition-[box-shadow,border-color] duration-200 hover:border-slate-50 hover:shadow-[0_10px_40px_-4px_rgba(15,23,42,0.12)] sm:min-h-[380px] sm:rounded-2xl lg:h-[490px] lg:max-h-[490px]"
     >
-      <div className="p-3 md:p-4 flex flex-col h-full min-h-0 min-w-0">
+      <div className="flex h-full min-h-0 min-w-0 flex-col p-2 sm:p-3 md:p-4">
         <div
-          className="relative h-[210px] md:h-[232px] w-full shrink-0 overflow-hidden rounded-xl bg-white flex items-center justify-center group/image"
+          className="group/image relative flex h-[110px] w-full shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white sm:h-[160px] md:h-[210px] lg:h-[232px] lg:rounded-xl"
           onMouseEnter={onImageEnter}
           onMouseLeave={onImageLeave}
         >
           {statusBadge ? (
             <span
-              className={`absolute left-2 top-2 z-10 rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide shadow-sm ${statusBadge.className}`}
+              className={`absolute left-1 top-1 z-10 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide shadow-sm sm:left-2 sm:top-2 sm:rounded-md sm:px-2 sm:text-[10px] ${statusBadge.className}`}
             >
               {statusBadge.label}
             </span>
@@ -96,35 +96,38 @@ const ProductCard = ({ product }) => {
               src={product.imageUrl}
             />
           ) : (
-            <span className="material-symbols-outlined text-6xl text-slate-200">laptop</span>
+            <span className="material-symbols-outlined text-4xl text-slate-200 sm:text-6xl">laptop</span>
           )}
         </div>
 
-        <div className="flex flex-col flex-1 min-h-0 pt-2.5 gap-1.5 overflow-hidden">
-          <h4 className="text-sm md:text-[18px] font-bold text-slate-900 leading-snug line-clamp-2 shrink-0">
+        <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden pt-1.5 sm:gap-1.5 sm:pt-2.5">
+          <h4 className="line-clamp-2 shrink-0 text-[11px] font-bold leading-snug text-slate-900 sm:text-sm md:text-[18px]">
             {product.name}
           </h4>
 
           {product.displaySku ? (
-            <p className="text-[11px] md:text-xs font-mono text-slate-500 truncate shrink-0" title={product.displaySku}>
+            <p
+              className="hidden shrink-0 truncate font-mono text-[11px] text-slate-500 sm:block md:text-xs"
+              title={product.displaySku}
+            >
               SKU:{product.displaySku}
             </p>
           ) : null}
 
           {product.specSummary ? (
-            <p className="text-sm md:text-[15px] text-slate-600 leading-snug line-clamp-2 shrink-0">
+            <p className="line-clamp-2 shrink-0 text-[10px] leading-snug text-slate-600 sm:text-sm md:text-[15px]">
               {product.specSummary}
             </p>
           ) : null}
 
-          <div className="flex flex-col gap-2.5 mt-auto pt-2 shrink-0 min-h-0">
+          <div className="mt-auto flex min-h-0 shrink-0 flex-col gap-1.5 pt-1 sm:gap-2.5 sm:pt-2">
             {colorNames.length > 0 ? (
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs md:text-sm font-semibold text-slate-500 shrink-0">Màu</span>
+              <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                <span className="shrink-0 text-[10px] font-semibold text-slate-500 sm:text-xs md:text-sm">Màu</span>
                 {colorNames.map((color) => (
                   <span
                     key={color}
-                    className="w-4 h-4 rounded-full border border-slate-300"
+                    className="h-3 w-3 rounded-full border border-slate-300 sm:h-4 sm:w-4"
                     style={{ backgroundColor: colorMap[color] || '#d1d5db' }}
                     title={color}
                   />
@@ -133,15 +136,17 @@ const ProductCard = ({ product }) => {
             ) : null}
 
             {product.variantCount > 1 ? (
-              <p className="text-xs md:text-sm font-semibold text-slate-500 leading-snug line-clamp-1">
+              <p className="line-clamp-1 text-[10px] font-semibold leading-snug text-slate-500 sm:text-xs md:text-sm">
                 +{product.variantCount - 1} phiên bản khác
               </p>
             ) : null}
 
-            <div className="flex items-center gap-2 flex-wrap">
-              <p className="text-rose-600 font-bold text-base leading-tight">{product.priceFormatted}</p>
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <p className="text-sm font-bold leading-tight text-rose-600 sm:text-base">{product.priceFormatted}</p>
               {product.min_discount > 0 ? (
-                <span className="text-red-50 bg-rose-600 text-[10px] font-bold px-2 py-0.5 rounded-full">-{product.min_discount}%</span>
+                <span className="rounded-full bg-rose-600 px-1.5 py-0.5 text-[9px] font-bold text-red-50 sm:px-2 sm:text-[10px]">
+                  -{product.min_discount}%
+                </span>
               ) : null}
             </div>
           </div>

@@ -83,7 +83,7 @@ export default function SearchResultsPage() {
             Hãy nhập từ khóa ở thanh tìm kiếm để xem kết quả.
           </div>
         ) : loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-5 lg:gap-4">
             {Array.from({ length: 10 }).map((_, idx) => (
               <ProductCardSkeleton key={idx} />
             ))}
@@ -93,7 +93,7 @@ export default function SearchResultsPage() {
             Không tìm thấy sản phẩm phù hợp.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-5 lg:gap-4">
             {visibleRecords.map((p) => (
               <div key={p.id} className="h-full">
                 <ProductCard product={mapProductToCard(p)} />

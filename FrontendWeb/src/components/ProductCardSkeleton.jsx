@@ -4,10 +4,10 @@ import React from "react";
 export default function ProductCardSkeleton() {
   return (
     <div
-      className="h-[468px] max-h-[468px] rounded-2xl border border-slate-200 bg-white overflow-hidden flex flex-col p-3 md:p-4"
+      className="flex min-h-[280px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white p-2 sm:min-h-[380px] sm:rounded-2xl sm:p-3 md:p-4 lg:h-[490px] lg:max-h-[490px]"
       aria-hidden
     >
-      <div className="h-[210px] md:h-[232px] w-full shrink-0 rounded-xl bg-slate-200 animate-pulse" />
+      <div className="h-[110px] w-full shrink-0 animate-pulse rounded-lg bg-slate-200 sm:h-[160px] md:h-[210px] lg:h-[232px] lg:rounded-xl" />
       <div className="flex flex-col flex-1 min-h-0 pt-2.5 gap-2 mt-0">
         <div className="h-4 bg-slate-200 rounded-md w-4/5 animate-pulse" />
         <div className="h-4 bg-slate-200 rounded-md w-full animate-pulse" />
