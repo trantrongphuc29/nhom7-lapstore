@@ -3,9 +3,9 @@ import { Link } from "react-router-dom";
 
 /** current: "cart" | "shipping" | "payment" */
 const steps = [
-  { id: "cart", label: "Giỏ hàng", href: "/gio-hang" },
-  { id: "shipping", label: "Thông tin nhận hàng", href: "/thong-tin-nhan-hang" },
-  { id: "payment", label: "Thanh toán", href: "/thanh-toan" },
+  { id: "cart", label: "Giỏ hàng", shortLabel: "Giỏ hàng", href: "/gio-hang" },
+  { id: "shipping", label: "Thông tin nhận hàng", shortLabel: "Nhận hàng", href: "/thong-tin-nhan-hang" },
+  { id: "payment", label: "Thanh toán", shortLabel: "Thanh toán", href: "/thanh-toan" },
 ];
 
 export default function CheckoutProgress({ current = "cart" }) {
@@ -13,8 +13,8 @@ export default function CheckoutProgress({ current = "cart" }) {
   const safeIndex = currentIndex >= 0 ? currentIndex : 0;
 
   return (
-    <nav aria-label="Tiến trình đặt hàng" className="w-full mb-8">
-      <ol className="flex flex-wrap items-center justify-center gap-y-3 gap-x-2 sm:gap-x-4 md:gap-x-6">
+    <nav aria-label="Tiến trình đặt hàng" className="mb-6 w-full max-w-full min-w-0 sm:mb-8">
+      <ol className="flex flex-wrap items-center justify-center gap-x-1 gap-y-2 sm:gap-x-4 sm:gap-y-3 md:gap-x-6">
         {steps.map((step, i) => {
           const done = i < safeIndex;
           const active = i === safeIndex;
@@ -36,11 +36,12 @@ export default function CheckoutProgress({ current = "cart" }) {
               </span>
               <span
                 className={[
-                  "text-sm font-semibold sm:whitespace-nowrap max-w-[140px] sm:max-w-none leading-tight",
+                  "text-center text-[11px] font-semibold leading-tight sm:whitespace-nowrap sm:text-sm",
                   active ? "text-slate-900" : done ? "text-emerald-700" : "text-slate-400",
                 ].join(" ")}
               >
-                {step.label}
+                <span className="sm:hidden">{step.shortLabel}</span>
+                <span className="hidden sm:inline">{step.label}</span>
               </span>
             </>
           );

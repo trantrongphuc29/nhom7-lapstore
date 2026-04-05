@@ -87,10 +87,10 @@ export default function CartPage() {
   };
 
   return (
-    <div className="bg-slate-50 font-display text-slate-900 min-h-screen flex flex-col">
+    <div className="flex min-h-screen flex-col overflow-x-hidden bg-slate-50 font-display text-slate-900">
       <Header />
-      <main className="flex-1 max-w-7xl mx-auto px-4 py-6 w-full">
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">Giỏ hàng</h1>
+      <main className="mx-auto w-full min-w-0 max-w-7xl flex-1 px-3 py-4 sm:px-4 sm:py-6">
+        <h1 className="mb-2 text-xl font-bold text-slate-900 sm:text-2xl">Giỏ hàng</h1>
         <CheckoutProgress current="cart" />
 
         {items.length === 0 ? (
@@ -102,15 +102,15 @@ export default function CartPage() {
             </Link>
           </div>
         ) : (
-          <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start w-full">
-            <div className="flex-1 w-full min-w-0 space-y-3 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] lg:pb-0">
-              <div className="flex items-center gap-3 text-sm mb-2">
-                <label className="flex items-center gap-2 cursor-pointer">
+          <div className="flex w-full flex-col items-start gap-6 lg:flex-row lg:gap-8">
+            <div className="w-full min-w-0 flex-1 space-y-3 pb-[calc(6rem+env(safe-area-inset-bottom,0px))] lg:pb-0">
+              <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
+                <label className="flex cursor-pointer items-center gap-2">
                   <input type="checkbox" checked={selected.size === items.length && items.length > 0} onChange={toggleAll} className="rounded border-slate-300" />
                   <span>Chọn tất cả</span>
                 </label>
                 {selected.size > 0 ? (
-                  <button type="button" onClick={bulkDelete} className="text-rose-600 font-medium hover:underline">
+                  <button type="button" onClick={bulkDelete} className="font-medium text-rose-600 hover:underline">
                     Xóa đã chọn ({selected.size})
                   </button>
                 ) : null}
@@ -122,7 +122,7 @@ export default function CartPage() {
                 return (
                   <div
                     key={li.lineId}
-                    className={`relative flex gap-3 rounded-2xl border border-slate-200 bg-white p-3 sm:p-4 ${
+                    className={`relative flex min-w-0 gap-2 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2.5 sm:gap-3 sm:p-4 ${
                       out ? "opacity-75" : ""
                     }`}
                   >
@@ -148,7 +148,7 @@ export default function CartPage() {
                     </label>
                     <Link
                       to={storefrontProductPath({ id: li.productId, slug: li.productSlug })}
-                      className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-100 bg-slate-50 sm:h-[100px] sm:w-[100px]"
+                      className="flex h-[72px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-100 bg-slate-50 sm:h-20 sm:w-20 sm:rounded-xl md:h-[100px] md:w-[100px]"
                     >
                       {imgSrc(li.image) ? (
                         <img src={imgSrc(li.image)} alt="" className="h-full w-full object-contain" />
@@ -161,11 +161,11 @@ export default function CartPage() {
                         <div className="flex items-start justify-between gap-2">
                           <Link
                             to={storefrontProductPath({ id: li.productId, slug: li.productSlug })}
-                            className="line-clamp-2 min-w-0 flex-1 font-bold text-slate-900 transition hover:text-slate-700"
+                            className="line-clamp-2 min-w-0 flex-1 break-words font-bold leading-snug text-slate-900 transition hover:text-slate-700"
                           >
                             {li.name}
                           </Link>
-                          <p className="shrink-0 text-base font-bold tabular-nums text-rose-600 sm:hidden">
+                          <p className="shrink-0 text-right text-sm font-bold tabular-nums text-rose-600 sm:hidden">
                             {fmtPrice(li.price * li.quantity)}₫
                           </p>
                         </div>
@@ -273,16 +273,16 @@ export default function CartPage() {
 
         {/* Mobile sticky bar */}
         {items.length > 0 ? (
-          <div className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-between gap-3 border-t border-slate-200 bg-white/95 px-4 pt-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] backdrop-blur lg:hidden pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-            <div className="min-w-0">
-              <p className="text-[11px] text-slate-500">Tổng thanh toán</p>
-              <p className="truncate text-lg font-bold tabular-nums text-rose-600">{fmtPrice(totals.total)}₫</p>
+          <div className="fixed bottom-0 left-0 right-0 z-40 flex max-w-[100vw] items-center justify-between gap-2 border-t border-slate-200 bg-white/95 px-3 pt-2.5 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] backdrop-blur sm:gap-3 sm:px-4 sm:pt-3 lg:hidden pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            <div className="min-w-0 flex-1 pr-1">
+              <p className="text-[10px] text-slate-500 sm:text-[11px]">Tổng thanh toán</p>
+              <p className="text-base font-bold tabular-nums text-rose-600 sm:text-lg">{fmtPrice(totals.total)}₫</p>
             </div>
             <button
               type="button"
               onClick={goCheckout}
               disabled={!allInStock}
-              className="shrink-0 rounded-xl bg-[#CCFF00] px-5 py-3 text-sm font-bold text-black disabled:opacity-50"
+              className="shrink-0 rounded-xl bg-[#CCFF00] px-4 py-2.5 text-xs font-bold text-black sm:px-5 sm:py-3 sm:text-sm disabled:opacity-50"
             >
               ĐẶT HÀNG →
             </button>

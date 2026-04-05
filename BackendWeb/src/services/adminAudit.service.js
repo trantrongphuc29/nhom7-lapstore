@@ -59,7 +59,7 @@ async function getAuditLogs(query) {
         SELECT l.id, l.user_id AS userId, u.email AS userEmail, l.module, l.action, l.target_type AS targetType, l.target_id AS targetId, l.metadata, l.created_at AS createdAt
         ${fromJoin}
         ${where}
-        ORDER BY l.id DESC
+        ORDER BY l.created_at DESC NULLS LAST, l.id DESC
         LIMIT ? OFFSET ?
       `,
       [...values, limit, offset]

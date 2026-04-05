@@ -98,7 +98,9 @@ const Header = () => {
             className="lg:hidden p-2.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all"
             aria-label={mobileAccountLabel}
           >
-            <span className="material-symbols-outlined block leading-none">menu</span>
+            <span className="material-symbols-outlined block text-[26px] leading-none" aria-hidden>
+              account_circle
+            </span>
           </Link>
         </div>
       </div>
