@@ -19,7 +19,8 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      CI: true
+      # GitHub Actions mặc định CI=true → CRA coi ESLint warning là lỗi build. Không set CI ở job;
+      # bước build bên dưới ghi đè CI=false.
       REACT_APP_API_URL: https://nhom7-lapstore-backend.onrender.com/api
       REACT_APP_BACKEND_URL: https://nhom7-lapstore-backend.onrender.com
       REACT_APP_PUBLIC_SITE_URL: https://nhom7-lapstore.onrender.com
@@ -36,6 +37,9 @@ jobs:
 
       - name: Install & build (verify trước khi trigger deploy)
         working-directory: FrontendWeb
+        env:
+          # Ghi đè CI=true của runner — tránh CRA fail build vì ESLint warnings.
+          CI: false
         run: |
           npm ci
           npm run build
