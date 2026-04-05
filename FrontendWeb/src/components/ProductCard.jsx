@@ -1,6 +1,9 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { storefrontProductPath } from '../utils/productPaths';
+
+/** Sau khoảng thời gian này (hover), card đổi sang ảnh thứ 2 và giữ nguyên đến khi rời chuột */
+const HOVER_SHOW_SECOND_IMAGE_MS = 1000;
 
 const colorMap = {
   'Đen': '#111827',
@@ -26,13 +29,42 @@ const ProductCard = ({ product }) => {
   const colorNames = (product.colors || []).slice(0, 4);
   const st = product.status;
   const statusBadge = st && st !== "active" ? STATUS_BADGE[st] : null;
+  const hasSecondImage = Boolean(product.imageUrl2);
+  const [showSecondImage, setShowSecondImage] = useState(false);
+  const hoverTimerRef = useRef(null);
+
+  useEffect(
+    () => () => {
+      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    },
+    []
+  );
+
+  const onImageEnter = () => {
+    if (!hasSecondImage) return;
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    hoverTimerRef.current = setTimeout(() => setShowSecondImage(true), HOVER_SHOW_SECOND_IMAGE_MS);
+  };
+
+  const onImageLeave = () => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+    setShowSecondImage(false);
+  };
+
   return (
     <Link
       to={storefrontProductPath(product)}
       className="bg-white rounded-2xl border border-slate-100 overflow-hidden hover:border-slate-50 hover:shadow-[0_10px_40px_-4px_rgba(15,23,42,0.12)] transition-[box-shadow,border-color] duration-200 relative flex flex-col h-[490px] max-h-[490px]"
     >
       <div className="p-3 md:p-4 flex flex-col h-full min-h-0 min-w-0">
-        <div className="relative h-[210px] md:h-[232px] w-full shrink-0 overflow-hidden rounded-xl bg-white flex items-center justify-center group/image">
+        <div
+          className="relative h-[210px] md:h-[232px] w-full shrink-0 overflow-hidden rounded-xl bg-white flex items-center justify-center group/image"
+          onMouseEnter={onImageEnter}
+          onMouseLeave={onImageLeave}
+        >
           {statusBadge ? (
             <span
               className={`absolute left-2 top-2 z-10 rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide shadow-sm ${statusBadge.className}`}
@@ -40,7 +72,24 @@ const ProductCard = ({ product }) => {
               {statusBadge.label}
             </span>
           ) : null}
-          {product.imageUrl ? (
+          {product.imageUrl && hasSecondImage ? (
+            <div className="relative w-full h-full flex items-center justify-center transition-transform duration-300 ease-out group-hover/image:scale-105">
+              <img
+                className={`absolute inset-0 m-auto max-h-full max-w-full object-contain transition-opacity duration-300 ease-out ${
+                  showSecondImage ? "opacity-0 pointer-events-none" : "opacity-100"
+                }`}
+                alt={product.name}
+                src={product.imageUrl}
+              />
+              <img
+                className={`absolute inset-0 m-auto max-h-full max-w-full object-contain transition-opacity duration-300 ease-out ${
+                  showSecondImage ? "opacity-100" : "opacity-0 pointer-events-none"
+                }`}
+                alt=""
+                src={product.imageUrl2}
+              />
+            </div>
+          ) : product.imageUrl ? (
             <img
               className="max-h-full max-w-full object-contain transition-transform duration-300 ease-out group-hover/image:scale-105"
               alt={product.name}

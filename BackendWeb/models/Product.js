@@ -39,7 +39,11 @@ class Product {
                (SELECT pv2.image FROM product_variants pv2
                 WHERE pv2.product_id = p.id AND pv2.image IS NOT NULL AND TRIM(pv2.image) <> ''
                 ORDER BY pv2.id ASC LIMIT 1)
-             ) AS image
+             ) AS image,
+             (SELECT pi2.image_url FROM product_images pi2
+              WHERE pi2.product_id = p.id
+              ORDER BY pi2.is_main DESC, pi2.sort_order ASC, pi2.id ASC
+              LIMIT 1 OFFSET 1) AS image2
       FROM products p
       LEFT JOIN product_admin_meta pam ON pam.product_id = p.id
       LEFT JOIN product_variants pv ON pv.product_id = p.id
@@ -72,7 +76,11 @@ class Product {
                (SELECT pv2.image FROM product_variants pv2
                 WHERE pv2.product_id = p.id AND pv2.image IS NOT NULL AND TRIM(pv2.image) <> ''
                 ORDER BY pv2.id ASC LIMIT 1)
-             ) AS image
+             ) AS image,
+             (SELECT pi2.image_url FROM product_images pi2
+              WHERE pi2.product_id = p.id
+              ORDER BY pi2.is_main DESC, pi2.sort_order ASC, pi2.id ASC
+              LIMIT 1 OFFSET 1) AS image2
       FROM products p
       LEFT JOIN product_admin_meta pam ON pam.product_id = p.id
       LEFT JOIN product_specs ps ON ps.product_id = p.id

@@ -33,6 +33,11 @@ function buildSpecSummary(product) {
 
 const fmt = (price) => new Intl.NumberFormat("vi-VN").format(price);
 
+function toStorefrontImageUrl(path) {
+  if (!path) return null;
+  return path.startsWith("http") ? path : `${BACKEND_BASE_URL}/${path}`;
+}
+
 export function mapProductToCard(product) {
   const displaySku =
     product.display_sku || product.displaySku || product.master_sku || product.masterSku || product.first_variant_sku || "";
@@ -40,11 +45,8 @@ export function mapProductToCard(product) {
     ...product,
     status: product.status ?? null,
     displaySku,
-    imageUrl: product.image
-      ? product.image.startsWith("http")
-        ? product.image
-        : `${BACKEND_BASE_URL}/${product.image}`
-      : null,
+    imageUrl: toStorefrontImageUrl(product.image),
+    imageUrl2: toStorefrontImageUrl(product.image2),
     priceFormatted: product.min_price ? fmt(product.min_price) : "Liên hệ",
     specSummary: buildSpecSummary(product),
     min_discount: Number(product.min_discount) || 0,
