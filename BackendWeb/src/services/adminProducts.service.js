@@ -89,6 +89,16 @@ async function assertSkuFreeForProductMeta(conn, rawSku, productId) {
   if (rowV) throw new AppError("SKU trùng với mã phiên bản đã có", 409, "SKU_CONFLICT");
 }
 
+async function assertSlugFreeForProductMeta(conn, rawSlug, productId) {
+  const slug = String(rawSlug || "").trim();
+  if (!slug) throw new AppError("Slug là bắt buộc", 400, "VALIDATION_ERROR");
+  const [[row]] = await conn.query(
+    `SELECT product_id FROM product_admin_meta WHERE slug = ? AND product_id <> ? LIMIT 1`,
+    [slug, productId]
+  );
+  if (row) throw new AppError("Slug đã được sử dụng bởi sản phẩm khác", 409, "SLUG_CONFLICT");
+}
+
 function assertDistinctVariantSkusInPayload(variants) {
   const seen = new Set();
   for (const v of variants || []) {
@@ -514,11 +524,26 @@ async function updateAdminProduct(id, payload, actorRole = "admin", actorId = nu
     if (!existing) throw new AppError("Product not found", 404, "NOT_FOUND");
 
     const categoryId = normalizeCategoryId(payload.categoryId);
-    const brandId = await resolveBrandId(conn, payload.brand);
+    let brandTrim = typeof payload.brand === "string" ? payload.brand.trim() : "";
+    if (!brandTrim) {
+      const [[merge]] = await conn.query(
+        `
+        SELECT COALESCE(b.name, p.brand) AS brand_label
+        FROM products p
+        LEFT JOIN product_admin_meta pam ON pam.product_id = p.id
+        LEFT JOIN brands b ON b.id = pam.brand_id
+        WHERE p.id = ?
+        LIMIT 1
+        `,
+        [productId]
+      );
+      brandTrim = String(merge?.brand_label || "").trim();
+    }
+    const brandId = await resolveBrandId(conn, brandTrim);
 
     await conn.query("UPDATE products SET name = ?, brand = ?, description = ? WHERE id = ?", [
       payload.name,
-      payload.brand,
+      brandTrim,
       payload.shortDescription ?? payload.description ?? null,
       productId,
     ]);
@@ -527,10 +552,11 @@ async function updateAdminProduct(id, payload, actorRole = "admin", actorId = nu
     let slug = payload.slug?.trim();
     if (!sku || !slug) {
       const [[pam]] = await conn.query("SELECT sku, slug FROM product_admin_meta WHERE product_id = ? LIMIT 1", [productId]);
-      sku = sku || pam?.sku || suggestProductSku(payload.name || "product", payload.brand || "");
+      sku = sku || pam?.sku || suggestProductSku(payload.name || "product", brandTrim || "");
       slug = slug || pam?.slug || slugify(payload.name || "product");
     }
     await assertSkuFreeForProductMeta(conn, sku, productId);
+    await assertSlugFreeForProductMeta(conn, slug, productId);
     await upsertProductAdminMeta(conn, productId, payload, sku, slug, categoryId, brandId);
 
     await persistVariants(conn, productId, payload.variants, actorRole);
@@ -567,11 +593,12 @@ async function getAdminProductById(id) {
   const [[product]] = await pool.query(
     `
       SELECT
-        p.id, p.name, p.brand, p.description,
+        p.id, p.name, COALESCE(b.name, p.brand) AS brand, p.description,
         pam.sku, pam.slug, pam.short_description, pam.detail_html, pam.category_id, pam.list_price, pam.sale_price, pam.cost_price,
         pam.status, pam.meta_title, pam.meta_description, pam.canonical_url
       FROM products p
       LEFT JOIN product_admin_meta pam ON pam.product_id = p.id
+      LEFT JOIN brands b ON b.id = pam.brand_id
       WHERE p.id = ?
       LIMIT 1
     `,

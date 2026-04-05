@@ -127,10 +127,11 @@ export default function ProductForm({
   }, [initialValues?.id, initialValues?.slug]);
 
   useEffect(() => {
+    if (initialValues?.id) return;
     if (slugUserEditedRef.current) return;
     const next = slugifyProductName(nameWatched);
     setValue("slug", next, { shouldValidate: true, shouldDirty: true });
-  }, [nameWatched, setValue]);
+  }, [nameWatched, setValue, initialValues?.id]);
 
   useEffect(() => {
     if (canonicalUserEditedRef.current) return;
@@ -169,18 +170,18 @@ export default function ProductForm({
   }, [token]);
 
   useEffect(() => {
-    const current = String(initialValues?.brand || watch("brand") || "").trim();
-    if (!current || !Array.isArray(brands) || brands.length === 0) return;
-    const norm = current.toLowerCase();
+    const raw = String(initialValues?.brand || "").trim();
+    if (!raw || !Array.isArray(brands) || brands.length === 0) return;
+    const norm = raw.toLowerCase();
     const matched = brands.find((b) => {
       const name = String(b?.name || "").trim().toLowerCase();
       const slug = String(b?.slug || "").trim().toLowerCase();
       return name === norm || slug === norm;
     });
-    if (matched?.name && matched.name !== current) {
+    if (matched?.name) {
       setValue("brand", matched.name, { shouldValidate: true, shouldDirty: false });
     }
-  }, [brands, initialValues?.brand, setValue, watch]);
+  }, [brands, initialValues?.brand, initialValues?.id, setValue]);
 
   const handleSuggestProductSku = async () => {
     const name = watch("name");
@@ -282,6 +283,14 @@ export default function ProductForm({
           <label className="text-sm font-medium">Thương hiệu *</label>
           <select {...register("brand")} className="mt-1 w-full border rounded-lg px-3 py-2 text-sm">
             <option value="">Chọn thương hiệu</option>
+            {initialValues?.brand &&
+            !brands.some(
+              (b) =>
+                String(b?.name || "").trim() === String(initialValues.brand).trim() ||
+                String(b?.slug || "").trim().toLowerCase() === String(initialValues.brand).trim().toLowerCase()
+            ) ? (
+              <option value={String(initialValues.brand).trim()}>{String(initialValues.brand).trim()} (chưa có trong danh sách)</option>
+            ) : null}
             {brands.map((item) => (
               <option key={item.id} value={item.name}>{item.name}</option>
             ))}
