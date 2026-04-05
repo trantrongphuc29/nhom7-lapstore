@@ -1,0 +1,43 @@
+# Deploy backend (Render) — tạo Deploy Hook trong Render Dashboard → Settings → Deploy Hook
+# Thêm secret repo: RENDER_DEPLOY_HOOK_BACKEND = URL hook (chỉ chứa URL, ví dụ https://api.render.com/deploy/srv-...)
+name: Deploy Backend
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "BackendWeb/**"
+      - ".github/workflows/be.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: BackendWeb/package-lock.json
+
+      - name: Install dependencies (verify lockfile)
+        working-directory: BackendWeb
+        run: npm ci
+
+      - name: Trigger Render deploy
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_BACKEND }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::error::Secret RENDER_DEPLOY_HOOK_BACKEND chưa được cấu hình trong GitHub → Settings → Secrets and variables → Actions"
+            exit 1
+          fi
+          curl -fsS -X POST "$HOOK"
