@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { storefrontProductPath } from '../utils/productPaths';
 
 /** Sau khoảng thời gian này (hover), card đổi sang ảnh thứ 2 và giữ nguyên đến khi rời chuột */
-const HOVER_SHOW_SECOND_IMAGE_MS = 1000;
+const HOVER_SHOW_SECOND_IMAGE_MS = 800;
 
 const colorMap = {
   'Đen': '#111827',

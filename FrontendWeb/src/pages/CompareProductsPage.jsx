@@ -150,24 +150,31 @@ function CompareProductsPage() {
         </div>
 
         <div className="overflow-x-auto bg-white border border-slate-200 rounded-2xl shadow-sm">
-          <table className="w-full min-w-[1080px] table-fixed">
+          <table className="w-full min-w-[1100px] table-fixed border-separate border-spacing-0">
             <colgroup>
-              <col className="w-[220px]" />
+              <col className="w-[260px]" />
               {products.map((product) => (
                 <col key={`col-${product.id}`} className="w-[300px]" />
               ))}
             </colgroup>
             <thead>
               <tr className="border-b border-slate-200">
-                <th className="text-left px-4 py-4 text-sm font-semibold text-slate-500 sticky top-16 left-0 z-30 bg-white border-r border-slate-100">
+                <th
+                  scope="col"
+                  className="text-left px-5 py-4 text-sm font-semibold text-slate-600 sticky top-16 left-0 z-30 w-[260px] min-w-[260px] max-w-[260px] bg-white border-r border-slate-200 shadow-[6px_0_14px_-8px_rgba(15,23,42,0.18)] align-top"
+                >
                   Tiêu chí
                 </th>
                 {products.map((product) => {
                   const variant = product.variants?.[0] || {};
                   const imageUrl = resolveImageUrl(product, variant);
                   return (
-                    <th key={product.id} className="px-4 py-4 text-left align-top sticky top-16 z-20 bg-white border-l border-slate-100">
-                      <div className="rounded-xl border border-slate-200 p-4 bg-slate-50 h-[220px] flex flex-col">
+                    <th
+                      key={product.id}
+                      scope="col"
+                      className="px-5 py-4 text-left align-top sticky top-16 z-20 bg-white border-l border-slate-200 min-w-[280px]"
+                    >
+                      <div className="rounded-xl border border-slate-200 p-4 bg-slate-50 min-h-[220px] flex flex-col">
                         <div className="flex items-start gap-3 mb-3 min-h-[72px]">
                           <div className="w-16 h-16 rounded-lg border border-slate-200 bg-white overflow-hidden flex items-center justify-center shrink-0">
                             {imageUrl ? (
@@ -219,27 +226,33 @@ function CompareProductsPage() {
               </tr>
             </thead>
             <tbody>
-              {specRows.map((row) => (
-                <tr key={row.key} className="border-b border-slate-100 last:border-b-0 odd:bg-white even:bg-slate-50/50">
-                  <td className="px-4 py-3 text-sm font-semibold text-slate-600 bg-slate-50 align-top sticky left-0 z-10 border-r border-slate-100">
-                    {row.label}
-                  </td>
-                  {products.map((product) => {
-                    const variant = product.variants?.[0] || {};
-                    const value = row.source === "variantOrSpecs"
-                      ? variant[row.key] || product.specs?.[row.key] || "-"
-                      : product.specs?.[row.key] || "-";
-                    return (
-                      <td
-                        key={`${product.id}-${row.key}`}
-                        className="px-4 py-3 text-sm text-slate-700 align-top border-l border-slate-100 leading-6 whitespace-pre-wrap break-words"
-                      >
-                        {value}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
+              {specRows.map((row, rowIndex) => {
+                const labelBg = rowIndex % 2 === 0 ? "bg-white" : "bg-slate-50";
+                return (
+                  <tr key={row.key} className="border-b border-slate-100 last:border-b-0 odd:bg-white even:bg-slate-50/50">
+                    <th
+                      scope="row"
+                      className={`px-5 py-3.5 text-sm font-semibold text-slate-700 align-top sticky left-0 z-10 w-[260px] min-w-[260px] max-w-[260px] border-r border-slate-200 shadow-[6px_0_14px_-8px_rgba(15,23,42,0.12)] ${labelBg} leading-relaxed`}
+                    >
+                      <span className="block pr-1">{row.label}</span>
+                    </th>
+                    {products.map((product) => {
+                      const variant = product.variants?.[0] || {};
+                      const value = row.source === "variantOrSpecs"
+                        ? variant[row.key] || product.specs?.[row.key] || "-"
+                        : product.specs?.[row.key] || "-";
+                      return (
+                        <td
+                          key={`${product.id}-${row.key}`}
+                          className="px-5 py-3.5 text-sm text-slate-800 align-top border-l border-slate-200 leading-relaxed whitespace-pre-wrap break-words min-h-[3rem]"
+                        >
+                          {value}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
