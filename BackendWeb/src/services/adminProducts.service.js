@@ -66,7 +66,10 @@ async function assertSkuFreeForVariant(conn, rawSku, productId, variantId) {
     [sku, vid, vid]
   );
   if (rowV) throw new AppError("SKU phiên bản đã tồn tại (trùng với phiên bản khác)", 409, "SKU_CONFLICT");
-  const [[rowP]] = await conn.query(`SELECT product_id FROM product_admin_meta WHERE sku = ? LIMIT 1`, [sku]);
+  const [[rowP]] = await conn.query(
+    `SELECT product_id FROM product_admin_meta WHERE sku = ? AND product_id <> ? LIMIT 1`,
+    [sku, productId]
+  );
   if (rowP) {
     throw new AppError(
       "SKU trùng với mã sản phẩm (SKU ở phần thông tin chung) — dùng mã khác cho phiên bản",
@@ -85,7 +88,10 @@ async function assertSkuFreeForProductMeta(conn, rawSku, productId) {
     [sku, productId]
   );
   if (rowP) throw new AppError("SKU sản phẩm (thông tin chung) đã tồn tại", 409, "SKU_CONFLICT");
-  const [[rowV]] = await conn.query(`SELECT id FROM product_variants WHERE sku = ? LIMIT 1`, [sku]);
+  const [[rowV]] = await conn.query(
+    `SELECT id FROM product_variants WHERE sku = ? AND product_id <> ? LIMIT 1`,
+    [sku, productId]
+  );
   if (rowV) throw new AppError("SKU trùng với mã phiên bản đã có", 409, "SKU_CONFLICT");
 }
 
@@ -111,7 +117,22 @@ function assertDistinctVariantSkusInPayload(variants) {
 
 function mapMysqlDuplicateToAppError(error) {
   if (error?.code !== "ER_DUP_ENTRY") return null;
-  const msg = String(error.sqlMessage || "");
+  const msg = String(error.sqlMessage || error.message || "");
+  const detail = String(error.detail || "");
+  const constraint = String(error.constraint || "");
+  const hay = `${msg} ${detail} ${constraint}`.toLowerCase();
+  if (hay.includes("product_variants") && hay.includes("sku")) {
+    return new AppError("SKU phiên bản trùng với bản ghi khác — đổi mã phiên bản", 409, "SKU_CONFLICT");
+  }
+  if (hay.includes("product_admin_meta") && hay.includes("sku")) {
+    return new AppError("SKU sản phẩm (thông tin chung) đã tồn tại", 409, "SKU_CONFLICT");
+  }
+  if (hay.includes("product_admin_meta") && hay.includes("slug")) {
+    return new AppError("Slug đã tồn tại trên sản phẩm khác", 409, "SLUG_CONFLICT");
+  }
+  if (hay.includes("brands")) {
+    return new AppError("Thương hiệu trùng tên hoặc slug trong hệ thống", 409, "CONFLICT");
+  }
   if (msg.includes("uk_product_variants_sku") || msg.includes("product_variants.sku")) {
     return new AppError("SKU phiên bản trùng với bản ghi khác — đổi mã phiên bản", 409, "SKU_CONFLICT");
   }
@@ -593,8 +614,8 @@ async function getAdminProductById(id) {
   const [[product]] = await pool.query(
     `
       SELECT
-        p.id, p.name, COALESCE(b.name, p.brand) AS brand, p.description,
-        pam.sku, pam.slug, pam.short_description, pam.detail_html, pam.category_id, pam.list_price, pam.sale_price, pam.cost_price,
+        p.id, p.name, COALESCE(NULLIF(TRIM(b.name), ''), NULLIF(TRIM(p.brand), '')) AS brand, p.description,
+        pam.brand_id, pam.sku, pam.slug, pam.short_description, pam.detail_html, pam.category_id, pam.list_price, pam.sale_price, pam.cost_price,
         pam.status, pam.meta_title, pam.meta_description, pam.canonical_url
       FROM products p
       LEFT JOIN product_admin_meta pam ON pam.product_id = p.id
@@ -650,7 +671,8 @@ async function getAdminProductById(id) {
   return {
     id: product.id,
     name: product.name,
-    brand: product.brand,
+    brand: product.brand != null && String(product.brand).trim() !== "" ? String(product.brand).trim() : null,
+    brandId: product.brand_id != null ? Number(product.brand_id) : null,
     description: product.description,
     sku: product.sku,
     slug: product.slug,

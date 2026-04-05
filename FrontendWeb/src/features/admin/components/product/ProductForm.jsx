@@ -96,7 +96,10 @@ export default function ProductForm({
   const defaultValues = useMemo(
     () => ({
       name: initialValues?.name || "",
-      brand: initialValues?.brand || "",
+      brand:
+        initialValues?.brand != null && String(initialValues.brand).trim() !== ""
+          ? String(initialValues.brand).trim()
+          : "",
       sku: initialValues?.sku || "",
       slug: initialValues?.slug || "",
       shortDescription: initialValues?.shortDescription || "",
@@ -170,8 +173,17 @@ export default function ProductForm({
   }, [token]);
 
   useEffect(() => {
-    const raw = String(initialValues?.brand || "").trim();
-    if (!raw || !Array.isArray(brands) || brands.length === 0) return;
+    if (!Array.isArray(brands) || brands.length === 0) return;
+    const bid = initialValues?.brandId != null ? Number(initialValues.brandId) : null;
+    if (Number.isFinite(bid) && bid > 0) {
+      const byId = brands.find((b) => Number(b.id) === bid);
+      if (byId?.name) {
+        setValue("brand", byId.name, { shouldValidate: true, shouldDirty: false });
+        return;
+      }
+    }
+    const raw = String(initialValues?.brand ?? "").trim();
+    if (!raw) return;
     const norm = raw.toLowerCase();
     const matched = brands.find((b) => {
       const name = String(b?.name || "").trim().toLowerCase();
@@ -181,7 +193,7 @@ export default function ProductForm({
     if (matched?.name) {
       setValue("brand", matched.name, { shouldValidate: true, shouldDirty: false });
     }
-  }, [brands, initialValues?.brand, initialValues?.id, setValue]);
+  }, [brands, initialValues?.brand, initialValues?.brandId, initialValues?.id, setValue]);
 
   const handleSuggestProductSku = async () => {
     const name = watch("name");

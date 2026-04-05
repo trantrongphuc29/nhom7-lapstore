@@ -60,6 +60,7 @@ export default function AdminProductEditPage() {
     <div>
       <PageHeader title="Sửa sản phẩm" subtitle={`Cập nhật thông tin sản phẩm #${id}`} />
       <ProductForm
+        key={initialValues?.id ?? `edit-${id}`}
         token={token}
         initialValues={initialValues}
         submitLabel="Lưu thay đổi"
