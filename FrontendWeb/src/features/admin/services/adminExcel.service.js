@@ -1,5 +1,6 @@
 import { API_ENDPOINTS } from "../../../config/api";
 import { getJson } from "../../../services/apiClient";
+import { notifyUnauthorizedSession } from "../../../utils/authSession";
 
 function headers(token) {
   return { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
@@ -25,7 +26,9 @@ export async function postExcelImport(payload, token) {
 
 export async function downloadExcelTemplate(type, token) {
   const url = API_ENDPOINTS.ADMIN_EXCEL_TEMPLATE(type);
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  const opts = { headers: { Authorization: `Bearer ${token}` } };
+  const res = await fetch(url, opts);
+  notifyUnauthorizedSession(res, opts);
   if (!res.ok) throw new Error("Không tải được file mẫu");
   const blob = await res.blob();
   const serverName = parseFileNameFromDisposition(res.headers.get("content-disposition"));
@@ -39,7 +42,9 @@ export async function downloadExcelTemplate(type, token) {
 export async function downloadReportExcel(report, token, extra = {}) {
   const q = new URLSearchParams({ report, ...extra });
   const url = `${API_ENDPOINTS.ADMIN_REPORT_EXPORT}?${q.toString()}`;
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  const opts = { headers: { Authorization: `Bearer ${token}` } };
+  const res = await fetch(url, opts);
+  notifyUnauthorizedSession(res, opts);
   if (!res.ok) throw new Error("Không tải được báo cáo");
   const blob = await res.blob();
   const serverName = parseFileNameFromDisposition(res.headers.get("content-disposition"));

@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { API_ENDPOINTS } from '../config/api';
+import { AUTH_UNAUTHORIZED_EVENT } from '../utils/authSession';
 
 const AuthContext = createContext(null);
 const TOKEN_KEY = 'lapstore_auth_token';
@@ -33,6 +34,11 @@ export function AuthProvider({ children }) {
     if (!token) return null;
     try {
       const res = await fetch(API_ENDPOINTS.AUTH_ME, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.status === 401) {
+        setToken('');
+        setUser(null);
+        return null;
+      }
       const data = await res.json();
       if (!res.ok) return null;
       const payload = data?.data || data;
@@ -60,8 +66,16 @@ export function AuthProvider({ children }) {
       headers: { Authorization: `Bearer ${token}` },
       signal: ac.signal,
     })
-      .then((res) => res.json())
+      .then((res) => {
+        if (res.status === 401) {
+          setToken('');
+          setUser(null);
+          return null;
+        }
+        return res.json();
+      })
       .then((data) => {
+        if (!data) return;
         const payload = data?.data || data;
         if (payload?.id != null && payload?.email) {
           setUser((prev) => ({
@@ -80,6 +94,15 @@ export function AuthProvider({ children }) {
       });
     return () => ac.abort();
   }, [token]);
+
+  useEffect(() => {
+    const clearSession = () => {
+      setToken('');
+      setUser(null);
+    };
+    window.addEventListener(AUTH_UNAUTHORIZED_EVENT, clearSession);
+    return () => window.removeEventListener(AUTH_UNAUTHORIZED_EVENT, clearSession);
+  }, []);
 
   const login = async (email, password) => {
     setIsLoading(true);

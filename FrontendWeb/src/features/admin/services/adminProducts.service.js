@@ -1,5 +1,6 @@
 import { API_ENDPOINTS } from "../../../config/api";
 import { getJson } from "../../../services/apiClient";
+import { notifyUnauthorizedSession } from "../../../utils/authSession";
 
 function authHeaders(token) {
   return { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
@@ -72,11 +73,13 @@ export async function uploadAdminProductImages(files, token, productName = "") {
   const formData = new FormData();
   files.forEach((file) => formData.append("images", file));
   if (productName) formData.append("productName", productName);
-  const response = await fetch(API_ENDPOINTS.ADMIN_UPLOAD_IMAGES, {
+  const uploadOpts = {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
     body: formData,
-  });
+  };
+  const response = await fetch(API_ENDPOINTS.ADMIN_UPLOAD_IMAGES, uploadOpts);
+  notifyUnauthorizedSession(response, uploadOpts);
   const data = await response.json();
   if (!response.ok || data?.success === false) {
     throw new Error(data?.message || "Upload failed");

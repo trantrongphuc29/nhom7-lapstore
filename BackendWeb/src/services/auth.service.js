@@ -48,7 +48,7 @@ async function login(payload) {
   const isPasswordValid = await bcrypt.compare(password, user.password);
   if (!isPasswordValid) throw new AppError("Invalid credentials", 401, "UNAUTHORIZED");
   const token = jwt.sign(buildTokenPayload(user), getJwtSecret(), {
-    expiresIn: process.env.JWT_EXPIRES_IN || "1d",
+    expiresIn: process.env.JWT_EXPIRES_IN || "30d",
   });
   const role = normalizeRole(user.role);
   return {
