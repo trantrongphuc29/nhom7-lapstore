@@ -34,6 +34,69 @@ function resolveImageUrl(product, variant) {
   return `${BACKEND_BASE_URL}/${String(raw).replace(/^\/+/, "")}`;
 }
 
+function getSpecCellValue(product, row) {
+  const variant = product.variants?.[0] || {};
+  if (row.source === "variantOrSpecs") {
+    return variant[row.key] || product.specs?.[row.key] || "-";
+  }
+  return product.specs?.[row.key] || "-";
+}
+
+function ProductCompareCardHeader({ product, onRemove }) {
+  const variant = product.variants?.[0] || {};
+  const imageUrl = resolveImageUrl(product, variant);
+  return (
+    <div className="rounded-xl border border-slate-200 p-3 bg-slate-50">
+      <div className="flex items-start gap-3 mb-3">
+        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg border border-slate-200 bg-white overflow-hidden flex items-center justify-center shrink-0">
+          {imageUrl ? (
+            <img src={imageUrl} alt={product.name} className="w-full h-full object-contain" />
+          ) : (
+            <span className="material-symbols-outlined text-slate-300">laptop</span>
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold text-slate-900 text-sm sm:text-base mb-1 line-clamp-3">{product.name}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-rose-600 font-bold text-sm">{fmt(variant.price)}</p>
+            {Number(variant.discount) > 0 ? (
+              <span className="text-red-50 bg-rose-600 text-[11px] font-bold px-2 py-0.5 rounded-full">-{variant.discount}%</span>
+            ) : null}
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center gap-1.5 mb-3 min-h-[20px] flex-wrap">
+        {[...new Set((product.variants || []).map((v) => v.color).filter(Boolean))].slice(0, 5).map((color) => (
+          <span
+            key={color}
+            className="w-4 h-4 rounded-full border border-slate-300 shrink-0"
+            style={{ backgroundColor: colorMap[color] || "#d1d5db" }}
+            title={color}
+          />
+        ))}
+        {(product.variants || []).length > 1 ? (
+          <span className="text-xs font-semibold text-slate-500">+{(product.variants || []).length - 1} phiên bản khác</span>
+        ) : null}
+      </div>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Link
+          to={storefrontProductPath(product)}
+          className="inline-flex justify-center rounded-lg bg-slate-900 text-white px-3 py-2 text-xs font-semibold hover:bg-slate-800 transition sm:flex-1"
+        >
+          Xem ngay
+        </Link>
+        <button
+          type="button"
+          onClick={() => onRemove(product.id)}
+          className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition sm:flex-1"
+        >
+          Xóa khỏi so sánh
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function CompareProductsPage() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -141,15 +204,38 @@ function CompareProductsPage() {
   return (
     <div className="min-h-screen bg-slate-50">
       <Header />
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between gap-3 mb-6">
-          <h1 className="text-2xl font-bold">So sánh sản phẩm</h1>
-          <button onClick={goBackToHome} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition">
+      <main className="max-w-7xl mx-auto px-3 py-6 sm:px-4 sm:py-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4 mb-6">
+          <h1 className="text-xl font-bold sm:text-2xl">So sánh sản phẩm</h1>
+          <button
+            type="button"
+            onClick={goBackToHome}
+            className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition sm:w-auto sm:py-2"
+          >
             Chọn lại sản phẩm
           </button>
         </div>
 
-        <div className="overflow-x-auto bg-white border border-slate-200 rounded-2xl shadow-sm">
+        {/* Mobile: mỗi sản phẩm một thẻ + bảng thông số dọc */}
+        <div className="space-y-5 md:hidden">
+          {products.map((product) => (
+            <section key={product.id} className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+              <div className="p-3 border-b border-slate-100">
+                <ProductCompareCardHeader product={product} onRemove={removeFromCompare} />
+              </div>
+              <dl className="divide-y divide-slate-100">
+                {specRows.map((row) => (
+                  <div key={row.key} className="grid grid-cols-[minmax(0,42%)_1fr] gap-x-3 gap-y-1 px-3 py-2.5 sm:px-4">
+                    <dt className="text-xs font-semibold text-slate-600 leading-snug">{row.label}</dt>
+                    <dd className="text-xs text-slate-800 leading-snug whitespace-pre-wrap break-words">{getSpecCellValue(product, row)}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          ))}
+        </div>
+
+        <div className="hidden md:block overflow-x-auto bg-white border border-slate-200 rounded-2xl shadow-sm">
           <table className="w-full min-w-[1100px] table-fixed border-separate border-spacing-0">
             <colgroup>
               <col className="w-[260px]" />
@@ -236,20 +322,14 @@ function CompareProductsPage() {
                     >
                       <span className="block pr-1">{row.label}</span>
                     </th>
-                    {products.map((product) => {
-                      const variant = product.variants?.[0] || {};
-                      const value = row.source === "variantOrSpecs"
-                        ? variant[row.key] || product.specs?.[row.key] || "-"
-                        : product.specs?.[row.key] || "-";
-                      return (
-                        <td
-                          key={`${product.id}-${row.key}`}
-                          className="px-5 py-3.5 text-sm text-slate-800 align-top border-l border-slate-200 leading-relaxed whitespace-pre-wrap break-words min-h-[3rem]"
-                        >
-                          {value}
-                        </td>
-                      );
-                    })}
+                    {products.map((product) => (
+                      <td
+                        key={`${product.id}-${row.key}`}
+                        className="px-5 py-3.5 text-sm text-slate-800 align-top border-l border-slate-200 leading-relaxed whitespace-pre-wrap break-words min-h-[3rem]"
+                      >
+                        {getSpecCellValue(product, row)}
+                      </td>
+                    ))}
                   </tr>
                 );
               })}

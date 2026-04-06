@@ -32,8 +32,10 @@ const ProductGridPanel = ({
   };
 
   return (
-    <section className={`flex-1 ${showCompareBar ? "pb-36" : ""}`}>
-      <div className="mb-6 flex items-center gap-2 rounded-2xl border border-slate-200 bg-white p-3 font-bold sm:p-4">
+    <section
+      className={`flex-1 ${showCompareBar ? "pb-52 sm:pb-44 md:pb-40" : ""}`}
+    >
+      <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3 font-bold sm:flex-row sm:items-center sm:gap-2 sm:p-4">
         <div className="flex min-w-0 flex-1 items-center gap-3 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <span className="shrink-0 whitespace-nowrap text-sm text-slate-500">Sắp xếp:</span>
           {SORT_OPTIONS.map((sort) => (
@@ -94,13 +96,13 @@ const ProductGridPanel = ({
                   type="button"
                   onClick={() => toggleCompareProduct(p.id)}
                   disabled={!compareIds.includes(p.id) && compareIds.length >= 3}
-                  className={`w-full rounded-lg border px-2 py-1.5 text-xs font-semibold transition sm:rounded-xl sm:px-3 sm:py-2 sm:text-sm ${
+                  className={`w-full rounded-lg border px-2 py-1.5 text-[11px] font-semibold leading-tight transition sm:rounded-xl sm:px-3 sm:py-2 sm:text-sm ${
                     compareIds.includes(p.id)
                       ? "border-slate-900 bg-slate-900 text-white"
                       : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
                   } disabled:cursor-not-allowed disabled:opacity-50`}
                 >
-                  {compareIds.includes(p.id) ? "Đã chọn so sánh" : "Chọn để so sánh"}
+                  {compareIds.includes(p.id) ? "Đã chọn" : "Chọn so sánh"}
                 </button>
               ) : null}
             </div>
@@ -124,34 +126,45 @@ const ProductGridPanel = ({
         </div>
       )}
 
-      <div className={`fixed left-0 right-0 bottom-0 z-40 transition-transform duration-300 ${showCompareBar ? "translate-y-0" : "translate-y-full"}`}>
+      <div
+        className={`fixed left-0 right-0 bottom-0 z-40 transition-transform duration-300 pb-[env(safe-area-inset-bottom,0px)] ${showCompareBar ? "translate-y-0" : "translate-y-full"}`}
+      >
         <div className="bg-white border-t border-slate-200 shadow-[0_-8px_24px_rgba(15,23,42,0.08)]">
-          <div className="max-w-7xl mx-auto px-4 py-4">
-            <div className="flex items-center justify-between gap-3 mb-3">
-              <p className="text-sm font-semibold text-slate-700">Sản phẩm đã chọn so sánh</p>
-              <button onClick={clearCompare} className="text-sm font-semibold text-slate-500 hover:text-slate-800 transition">
+          <div className="max-w-7xl mx-auto px-3 py-3 sm:px-4 sm:py-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <p className="text-xs font-semibold text-slate-700 sm:text-sm">Đã chọn so sánh ({compareIds.length}/3)</p>
+              <button
+                type="button"
+                onClick={clearCompare}
+                className="text-xs font-semibold text-slate-500 hover:text-slate-800 transition sm:text-sm"
+              >
                 Xóa tất cả
               </button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-3 mb-3 sm:mb-4 max-h-[40vh] overflow-y-auto overscroll-contain md:max-h-none md:overflow-visible">
               {selectedCompareProducts.map((item) => (
-                <div key={item.id} className="group rounded-xl border border-slate-200 px-3 py-2 bg-slate-50 flex items-center justify-between gap-2">
-                  <span className="text-sm text-slate-700 line-clamp-1">{item.name}</span>
+                <div
+                  key={item.id}
+                  className="group rounded-xl border border-slate-200 px-2.5 py-2 bg-slate-50 flex items-center justify-between gap-2 sm:px-3"
+                >
+                  <span className="min-w-0 text-xs text-slate-700 line-clamp-2 sm:text-sm sm:line-clamp-1">{item.name}</span>
                   <button
+                    type="button"
                     onClick={() => toggleCompareProduct(item.id)}
-                    className="opacity-0 group-hover:opacity-100 transition text-slate-400 hover:text-rose-600"
+                    className="shrink-0 rounded-lg p-1 text-slate-400 transition hover:bg-white hover:text-rose-600 md:opacity-0 md:group-hover:opacity-100"
                     aria-label="Xóa khỏi so sánh"
                   >
-                    <span className="material-symbols-outlined text-lg">close</span>
+                    <span className="material-symbols-outlined text-lg leading-none">close</span>
                   </button>
                 </div>
               ))}
             </div>
-            <div className="flex justify-end">
+            <div className="flex justify-stretch sm:justify-end">
               <button
+                type="button"
                 onClick={handleGoCompare}
                 disabled={compareIds.length < 2}
-                className="rounded-xl bg-slate-900 text-white px-4 py-2.5 text-sm font-semibold hover:bg-slate-800 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full rounded-xl bg-slate-900 text-white px-4 py-3 text-sm font-semibold hover:bg-slate-800 transition disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto sm:py-2.5"
               >
                 So sánh ngay
               </button>
