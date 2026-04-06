@@ -2,8 +2,9 @@ const jwt = require("jsonwebtoken");
 const AppError = require("../utils/AppError");
 const { getJwtSecret } = require("../config/env");
 const { normalizeRole, isStaffRole, isSuperAdmin } = require("../config/rbac");
+const AuthUser = require("../models/AuthUser");
 
-function verifyToken(req, res, next) {
+async function verifyToken(req, res, next) {
   const authHeader = req.headers.authorization || "";
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
   if (!token) {
@@ -17,7 +18,13 @@ function verifyToken(req, res, next) {
   }
   try {
     const payload = jwt.verify(token, getJwtSecret());
-    req.user = { ...payload, role: normalizeRole(payload.role) };
+    const normalizedRole = normalizeRole(payload.role);
+    const accessState = await AuthUser.getAccountAccessState(payload.sub);
+    if (!accessState) return next(new AppError("User not found", 401, "UNAUTHORIZED"));
+    if (accessState.isBlocked) {
+      return next(new AppError("Tài khoản đã bị khóa", 401, "ACCOUNT_BLOCKED"));
+    }
+    req.user = { ...payload, role: normalizedRole };
     return next();
   } catch (error) {
     return next(new AppError("Invalid or expired token", 401, "UNAUTHORIZED"));

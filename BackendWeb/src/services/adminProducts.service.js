@@ -493,6 +493,7 @@ async function createAdminProduct(payload, actorRole = "admin", actorId = null) 
     const slug = payload.slug?.trim() || slugify(name);
 
     await assertSkuFreeForProductMeta(conn, sku, productId);
+    await assertSlugFreeForProductMeta(conn, slug, productId);
 
     await conn.query(
       `

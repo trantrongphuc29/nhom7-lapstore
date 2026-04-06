@@ -173,18 +173,21 @@ async function updateAdminCustomerStatus(id, payload, actorId = null) {
   if (!Number.isInteger(userId) || userId <= 0) throw new AppError("Invalid customer id", 400, "VALIDATION_ERROR");
   const status = payload.status;
   if (!["active", "blocked"].includes(status)) throw new AppError("Invalid customer status", 400, "VALIDATION_ERROR");
+  const [[targetUser]] = await pool.query("SELECT id, role, email, created_at FROM users WHERE id = ? LIMIT 1", [userId]);
+  if (!targetUser) throw new AppError("Customer not found", 404, "NOT_FOUND");
+  if (String(targetUser.role || "").toLowerCase() === "admin" && status === "blocked") {
+    throw new AppError("Không thể khóa tài khoản admin", 400, "FORBIDDEN_OPERATION");
+  }
   const [[exists]] = await pool.query("SELECT id FROM customers WHERE user_id = ? LIMIT 1", [userId]);
   if (exists) {
     await pool.query("UPDATE customers SET status = ? WHERE user_id = ?", [status, userId]);
   } else {
-    const [[u]] = await pool.query("SELECT email, created_at FROM users WHERE id = ? LIMIT 1", [userId]);
-    if (!u) throw new AppError("Customer not found", 404, "NOT_FOUND");
     await pool.query(
       `
       INSERT INTO customers (user_id, full_name, email, phone, status, customer_group, loyalty_points, total_spent, created_at)
       VALUES (?, ?, ?, ?, ?, 'retail', 0, 0, ?)
       `,
-      [userId, String(u.email || "").split("@")[0], u.email, null, status, u.created_at]
+      [userId, String(targetUser.email || "").split("@")[0], targetUser.email, null, status, targetUser.created_at]
     );
   }
   await createAuditLog({

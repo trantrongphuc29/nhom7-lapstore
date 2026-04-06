@@ -45,6 +45,10 @@ async function login(payload) {
   if (!email || !password) throw new AppError("Email and password are required", 400, "VALIDATION_ERROR");
   const user = await AuthUser.findByEmail(email.trim().toLowerCase());
   if (!user) throw new AppError("Invalid credentials", 401, "UNAUTHORIZED");
+  const accessState = await AuthUser.getAccountAccessState(user.id);
+  if (accessState?.isBlocked) {
+    throw new AppError("Tài khoản đã bị khóa", 401, "ACCOUNT_BLOCKED");
+  }
   const isPasswordValid = await bcrypt.compare(password, user.password);
   if (!isPasswordValid) throw new AppError("Invalid credentials", 401, "UNAUTHORIZED");
   const token = jwt.sign(buildTokenPayload(user), getJwtSecret(), {

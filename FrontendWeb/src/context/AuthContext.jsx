@@ -117,6 +117,15 @@ export function AuthProvider({ children }) {
   }, [token]);
 
   useEffect(() => {
+    const t = sanitizeStoredToken(token);
+    if (!t) return undefined;
+    const intervalId = window.setInterval(() => {
+      refreshUser();
+    }, 60 * 1000);
+    return () => window.clearInterval(intervalId);
+  }, [token, refreshUser]);
+
+  useEffect(() => {
     const clearSession = () => {
       setToken('');
       setUser(null);

@@ -25,6 +25,27 @@ class AuthUser {
     return rows[0] || null;
   }
 
+  static async getAccountAccessState(id) {
+    const [rows] = await pool.query(
+      `
+      SELECT
+        u.id,
+        u.role,
+        COALESCE(c.status, 'active') AS customer_status
+      FROM users u
+      LEFT JOIN customers c ON c.user_id = u.id
+      WHERE u.id = ?
+      LIMIT 1
+      `,
+      [id]
+    );
+    const row = rows[0] || null;
+    if (!row) return null;
+    const role = String(row.role || "user").toLowerCase() === "admin" ? "admin" : "user";
+    const isBlocked = role !== "admin" && String(row.customer_status || "active").toLowerCase() === "blocked";
+    return { id: row.id, role, isBlocked };
+  }
+
   static async create({ email, passwordHash, role = "user" }) {
     const [result] = await pool.query(
       'INSERT INTO users (email, password, role) VALUES (?, ?, ?)',
