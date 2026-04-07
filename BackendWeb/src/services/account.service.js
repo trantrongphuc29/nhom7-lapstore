@@ -121,7 +121,7 @@ async function listOrders(userId) {
     `
     SELECT
       LOWER(NULLIF(TRIM(u.email), '')) AS email,
-      COALESCE(NULLIF(TRIM(c.phone), ''), NULLIF(TRIM(u.phone), '')) AS phone
+      NULLIF(TRIM(c.phone), '') AS phone
     FROM users u
     LEFT JOIN customers c ON c.user_id = u.id
     WHERE u.id = ?
@@ -146,7 +146,7 @@ async function listOrders(userId) {
   whereValues.push(uid);
   whereClauses.push("( ? IS NOT NULL AND LOWER(NULLIF(TRIM(o.customer_email), '')) = ? )");
   whereValues.push(email, email);
-  whereClauses.push("( ? IS NOT NULL AND REGEXP_REPLACE(COALESCE(o.customer_phone, ''), '\\D', '', 'g') = ? )");
+  whereClauses.push("( ? IS NOT NULL AND REGEXP_REPLACE(COALESCE(o.customer_phone, ''), '[^0-9]', '', 'g') = ? )");
   whereValues.push(phoneDigits, phoneDigits);
 
   const whereByAccount = whereClauses.length > 0 ? whereClauses.join(" OR ") : "1=0";
