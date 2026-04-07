@@ -2,7 +2,14 @@
  * Đồng bộ sequence SERIAL với MAX(id) — tránh duplicate key trên pkey sau import SQL / lệch sequence (PostgreSQL).
  */
 async function syncSerialSequenceToMax(pool, tableName, idColumn = "id") {
-  const allowed = new Set(["brands", "categories", "products"]);
+  const allowed = new Set([
+    "brands",
+    "categories",
+    "products",
+    "product_specs",
+    "product_variants",
+    "product_images",
+  ]);
   if (!allowed.has(tableName)) {
     throw new Error(`syncSerialSequenceToMax: bảng không được phép: ${tableName}`);
   }

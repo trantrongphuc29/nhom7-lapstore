@@ -271,6 +271,8 @@ async function upsertProductSpecs(conn, productId, rawSpecs) {
       [...vals, productId]
     );
   } else {
+    // PostgreSQL: tránh duplicate key trên product_specs.id khi sequence lệch sau import SQL.
+    await syncSerialSequenceToMax(conn, "product_specs", "id");
     await conn.query(
       `
       INSERT INTO product_specs (
