@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import PageHeader from "../components/common/PageHeader";
-import TableShell from "../components/common/TableShell";
 import { EmptyRow, ErrorBox, LoadingRow } from "../components/common/AsyncState";
 import { useAuth } from "../../../context/AuthContext";
 import {
@@ -49,10 +48,7 @@ function voucherToForm(v) {
 }
 
 function discountLabel(v) {
-  if (v.discountType === "percent") {
-    const cap = v.maxDiscountAmount != null && Number(v.maxDiscountAmount) > 0 ? ` (tối đa ${fmtPrice(v.maxDiscountAmount)}₫)` : "";
-    return `${Number(v.discountValue)}%${cap}`;
-  }
+  if (v.discountType === "percent") return `${Number(v.discountValue)}%`;
   return `${fmtPrice(v.discountValue)}₫`;
 }
 
@@ -169,20 +165,23 @@ export default function AdminPromotionsPage() {
       <div className="xl:col-span-2 space-y-4">
         <PageHeader title="Khuyến mãi" subtitle="Chọn voucher trong danh sách để sửa, hoặc tạo mới bên phải." />
         {query.isError ? <ErrorBox text={query.error?.message || "Không tải được dữ liệu khuyến mãi"} /> : null}
-        <div>
+        <div className="min-w-0">
           <p className="text-sm font-semibold text-slate-700 mb-2">Danh sách voucher</p>
           <p className="text-xs text-slate-500 mb-2">Nhấp một dòng để nạp vào form chỉnh sửa.</p>
-          <TableShell
-            headers={[
-              { key: "code", label: "Mã" },
-              { key: "discount", label: "Ưu đãi" },
-              { key: "max", label: "Giảm tối đa" },
-              { key: "min", label: "Đơn tối thiểu" },
-              { key: "usage", label: "Lượt dùng" },
-              { key: "period", label: "Hiệu lực" },
-              { key: "active", label: "Trạng thái" },
-            ]}
-          >
+          <div className="rounded-xl border border-slate-200 bg-white overflow-x-auto">
+            <table className="min-w-[980px] w-full text-sm table-fixed">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="text-left px-3 py-2.5 text-slate-600 w-[140px]">Mã</th>
+                  <th className="text-left px-3 py-2.5 text-slate-600 w-[120px]">Ưu đãi</th>
+                  <th className="text-left px-3 py-2.5 text-slate-600 w-[150px]">Giảm tối đa</th>
+                  <th className="text-left px-3 py-2.5 text-slate-600 w-[150px]">Đơn tối thiểu</th>
+                  <th className="text-left px-3 py-2.5 text-slate-600 w-[120px]">Lượt dùng</th>
+                  <th className="text-left px-3 py-2.5 text-slate-600">Hiệu lực</th>
+                  <th className="text-left px-3 py-2.5 text-slate-600 w-[120px]">Trạng thái</th>
+                </tr>
+              </thead>
+              <tbody>
             {query.isLoading ? (
               <LoadingRow colSpan={7} text="Đang tải voucher..." />
             ) : (
@@ -206,13 +205,13 @@ export default function AdminPromotionsPage() {
                       active ? "bg-blue-50 ring-1 ring-inset ring-blue-200" : "hover:bg-slate-50",
                     ].join(" ")}
                   >
-                    <td className="px-3 py-2.5 font-mono font-semibold text-slate-900">{v.code}</td>
-                    <td className="px-3 py-2.5 text-sm">{discountLabel(v)}</td>
-                    <td className="px-3 py-2.5 text-sm tabular-nums">
+                    <td className="px-3 py-2.5 font-mono font-semibold text-slate-900 whitespace-nowrap">{v.code}</td>
+                    <td className="px-3 py-2.5 text-sm whitespace-nowrap">{discountLabel(v)}</td>
+                    <td className="px-3 py-2.5 text-sm tabular-nums whitespace-nowrap">
                       {v.discountType === "percent" ? (capAmount > 0 ? `${fmtPrice(capAmount)}₫` : "Không giới hạn") : "Không áp dụng"}
                     </td>
-                    <td className="px-3 py-2.5 text-sm tabular-nums">{fmtPrice(v.minOrderValue || 0)}₫</td>
-                    <td className="px-3 py-2.5 text-sm tabular-nums">
+                    <td className="px-3 py-2.5 text-sm tabular-nums whitespace-nowrap">{fmtPrice(v.minOrderValue || 0)}₫</td>
+                    <td className="px-3 py-2.5 text-sm tabular-nums whitespace-nowrap">
                       {v.usedCount ?? 0}/{Number(v.usageLimit) > 0 ? v.usageLimit : "∞"}
                     </td>
                     <td className="px-3 py-2.5 text-xs text-slate-600 max-w-[200px]">
@@ -231,7 +230,9 @@ export default function AdminPromotionsPage() {
               })
             )}
             {!query.isLoading && vouchers.length === 0 ? <EmptyRow colSpan={7} text="Chưa có voucher." /> : null}
-          </TableShell>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
       <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4 h-fit xl:sticky xl:top-4">

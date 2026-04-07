@@ -83,20 +83,22 @@ const ProductGridPanel = ({
       <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3 lg:gap-6">
         {loading ? (
           Array.from({ length: skeletonSlots }).map((_, i) => (
-            <div key={`sk-${i}`} className="space-y-2 h-full">
+            <div key={`sk-${i}`} className="h-full">
               <ProductCardSkeleton />
             </div>
           ))
         ) : products.length ? (
           products.slice(0, visibleCount).map((p) => (
-            <div key={p.id} className="space-y-2 h-full">
-              <ProductCard product={mapProductToCard(p)} />
+            <div key={p.id} className="flex h-full flex-col gap-2">
+              <div className="min-h-0 flex-1">
+                <ProductCard product={mapProductToCard(p)} />
+              </div>
               {compareMode ? (
                 <button
                   type="button"
                   onClick={() => toggleCompareProduct(p.id)}
                   disabled={!compareIds.includes(p.id) && compareIds.length >= 3}
-                  className={`w-full rounded-lg border px-2 py-1.5 text-[11px] font-semibold leading-tight transition sm:rounded-xl sm:px-3 sm:py-2 sm:text-sm ${
+                  className={`relative z-10 w-full rounded-lg border px-2 py-1.5 text-[11px] font-semibold leading-tight transition sm:rounded-xl sm:px-3 sm:py-2 sm:text-sm ${
                     compareIds.includes(p.id)
                       ? "border-slate-900 bg-slate-900 text-white"
                       : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
