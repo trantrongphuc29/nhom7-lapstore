@@ -8,6 +8,7 @@ const PICKUP_STORES = [
   { id: "hcm-q8", label: "LAPSTORE Quận 8 — 180 Cao Lỗ, Q.8, TPHCM" },
 ];
 const { ordersTableHasUserIdColumn } = require("../utils/ordersSchema.util");
+let cachedOrderHistoryColumns = null;
 
 function storeLabel(id) {
   return PICKUP_STORES.find((s) => s.id === id)?.label ?? id ?? "";
@@ -29,6 +30,44 @@ function truncate(s, max) {
   const str = String(s || "");
   if (str.length <= max) return str;
   return `${str.slice(0, max - 1)}…`;
+}
+
+async function getOrderStatusHistoryColumns(queryable) {
+  if (cachedOrderHistoryColumns) return cachedOrderHistoryColumns;
+  const [rows] = await queryable.query(
+    `
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_schema = ANY (current_schemas(false))
+        AND table_name = 'order_status_history'
+    `
+  );
+  const set = new Set((rows || []).map((r) => String(r.column_name || "").toLowerCase()));
+  cachedOrderHistoryColumns = {
+    hasTable: set.size > 0,
+    changedBy: set.has("changed_by")
+      ? "changed_by"
+      : set.has("changed_by_id")
+        ? "changed_by_id"
+        : null,
+  };
+  return cachedOrderHistoryColumns;
+}
+
+async function appendPendingOrderTimeline(queryable, orderId, note) {
+  const meta = await getOrderStatusHistoryColumns(queryable);
+  if (!meta.hasTable) return;
+  const columns = ["order_id", "status", "note"];
+  const values = [orderId, "pending", note || null];
+  if (meta.changedBy) {
+    columns.push(meta.changedBy);
+    values.push(null);
+  }
+  const placeholders = columns.map(() => "?").join(", ");
+  await queryable.query(
+    `INSERT INTO order_status_history (${columns.join(", ")}) VALUES (${placeholders})`,
+    values
+  );
 }
 
 /** @param {object} shipping Frontend checkoutFlow shape */
@@ -255,10 +294,7 @@ async function createStorefrontOrder(body, authUser) {
       );
     }
 
-    await conn.query(
-      `INSERT INTO order_status_history (order_id, status, note, changed_by) VALUES (?, 'pending', ?, NULL)`,
-      [orderId, "Đặt hàng từ website"]
-    );
+    await appendPendingOrderTimeline(conn, orderId, "Đặt hàng từ website");
 
     if (voucherCodeForRedeem) {
       await vouchersService.redeemVoucher(voucherCodeForRedeem, subtotal, (sql, params) => conn.query(sql, params));

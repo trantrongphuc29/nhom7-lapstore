@@ -72,7 +72,7 @@ async function getAdminCustomers(query) {
     );
   } catch (error) {
     if (!isPgSchemaError(error)) throw error;
-    const [{ total = 0 } = {}] = await pool.query(`SELECT COUNT(*) AS total FROM users`);
+    const [[{ total = 0 } = {}]] = await pool.query(`SELECT COUNT(*) AS total FROM users`);
     count = { total };
     [rows] = await pool.query(
       `

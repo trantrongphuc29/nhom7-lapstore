@@ -2,6 +2,8 @@ const pool = require("../../config/database");
 const AppError = require("../utils/AppError");
 const { createAuditLog } = require("./adminAudit.service");
 
+let cachedOrderHistoryColumns = null;
+
 async function safeQuery(query, params = [], fallback = []) {
   try {
     const [rows] = await pool.query(query, params);
@@ -11,6 +13,66 @@ async function safeQuery(query, params = [], fallback = []) {
     if (code === "ER_NO_SUCH_TABLE" || code === "42P01") return fallback;
     throw error;
   }
+}
+
+async function getOrderStatusHistoryColumns() {
+  if (cachedOrderHistoryColumns) return cachedOrderHistoryColumns;
+  const [rows] = await pool.query(
+    `
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_schema = ANY (current_schemas(false))
+        AND table_name = 'order_status_history'
+    `
+  );
+  const set = new Set((rows || []).map((r) => String(r.column_name || "").toLowerCase()));
+  cachedOrderHistoryColumns = {
+    hasTable: set.size > 0,
+    changedBy: set.has("changed_by")
+      ? "changed_by"
+      : set.has("changed_by_id")
+        ? "changed_by_id"
+        : null,
+    createdAt: set.has("created_at")
+      ? "created_at"
+      : set.has("changed_at")
+        ? "changed_at"
+        : null,
+  };
+  return cachedOrderHistoryColumns;
+}
+
+async function listOrderTimeline(orderId) {
+  const meta = await getOrderStatusHistoryColumns();
+  if (!meta.hasTable) return [];
+  const changedByExpr = meta.changedBy ? `${meta.changedBy} AS changedBy` : "NULL AS changedBy";
+  const createdAtExpr = meta.createdAt ? `${meta.createdAt} AS createdAt` : "NULL AS createdAt";
+  return safeQuery(
+    `
+      SELECT id, status, note, ${changedByExpr}, ${createdAtExpr}
+      FROM order_status_history
+      WHERE order_id = ?
+      ORDER BY ${meta.createdAt || "id"} ASC
+    `,
+    [orderId],
+    []
+  );
+}
+
+async function appendOrderTimeline(orderId, status, note, actorId) {
+  const meta = await getOrderStatusHistoryColumns();
+  if (!meta.hasTable) return;
+  const columns = ["order_id", "status", "note"];
+  const values = [orderId, status, note || null];
+  if (meta.changedBy) {
+    columns.push(meta.changedBy);
+    values.push(actorId);
+  }
+  const placeholders = columns.map(() => "?").join(", ");
+  await pool.query(
+    `INSERT INTO order_status_history (${columns.join(", ")}) VALUES (${placeholders})`,
+    values
+  );
 }
 
 async function getAdminOrders(query) {
@@ -102,15 +164,7 @@ async function getAdminOrderById(id) {
     `,
     [orderId]
   );
-  const timeline = await safeQuery(
-    `
-      SELECT id, status, note, changed_by AS changedBy, created_at AS createdAt
-      FROM order_status_history
-      WHERE order_id = ?
-      ORDER BY created_at ASC
-    `,
-    [orderId]
-  );
+  const timeline = await listOrderTimeline(orderId);
 
   return {
     id: order.id,
@@ -175,10 +229,7 @@ async function updateAdminOrderStatus(id, payload, actorId = null) {
     payload.internalNote || null,
     orderId,
   ]);
-  await pool.query(
-    "INSERT INTO order_status_history (order_id, status, note, changed_by) VALUES (?, ?, ?, ?)",
-    [orderId, status, payload.note || null, actorId]
-  );
+  await appendOrderTimeline(orderId, status, payload.note, actorId);
   await createAuditLog({
     userId: actorId,
     module: "orders",
