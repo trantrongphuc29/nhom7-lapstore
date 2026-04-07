@@ -219,7 +219,13 @@ async function listOrders(userId) {
           oi.variant_name AS variantName,
           oi.quantity,
           oi.unit_price AS unitPrice,
-          NULL AS image
+          (
+            SELECT pi.image_url
+            FROM product_images pi
+            WHERE pi.product_id = oi.product_id
+            ORDER BY pi.is_main DESC, pi.sort_order ASC, pi.id ASC
+            LIMIT 1
+          ) AS image
         FROM order_items oi
         WHERE oi.order_id IN (${placeholders})
         ORDER BY oi.order_id DESC, oi.id ASC
