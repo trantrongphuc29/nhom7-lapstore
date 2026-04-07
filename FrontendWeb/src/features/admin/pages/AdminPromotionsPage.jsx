@@ -176,6 +176,7 @@ export default function AdminPromotionsPage() {
             headers={[
               { key: "code", label: "Mã" },
               { key: "discount", label: "Ưu đãi" },
+              { key: "max", label: "Giảm tối đa" },
               { key: "min", label: "Đơn tối thiểu" },
               { key: "usage", label: "Lượt dùng" },
               { key: "period", label: "Hiệu lực" },
@@ -183,10 +184,11 @@ export default function AdminPromotionsPage() {
             ]}
           >
             {query.isLoading ? (
-              <LoadingRow colSpan={6} text="Đang tải voucher..." />
+              <LoadingRow colSpan={7} text="Đang tải voucher..." />
             ) : (
               vouchers.map((v) => {
                 const active = selectedId === v.id;
+                const capAmount = Number(v.maxDiscountAmount || 0);
                 return (
                   <tr
                     key={v.id}
@@ -206,6 +208,9 @@ export default function AdminPromotionsPage() {
                   >
                     <td className="px-3 py-2.5 font-mono font-semibold text-slate-900">{v.code}</td>
                     <td className="px-3 py-2.5 text-sm">{discountLabel(v)}</td>
+                    <td className="px-3 py-2.5 text-sm tabular-nums">
+                      {v.discountType === "percent" ? (capAmount > 0 ? `${fmtPrice(capAmount)}₫` : "Không giới hạn") : "Không áp dụng"}
+                    </td>
                     <td className="px-3 py-2.5 text-sm tabular-nums">{fmtPrice(v.minOrderValue || 0)}₫</td>
                     <td className="px-3 py-2.5 text-sm tabular-nums">
                       {v.usedCount ?? 0}/{Number(v.usageLimit) > 0 ? v.usageLimit : "∞"}
@@ -225,7 +230,7 @@ export default function AdminPromotionsPage() {
                 );
               })
             )}
-            {!query.isLoading && vouchers.length === 0 ? <EmptyRow colSpan={6} text="Chưa có voucher." /> : null}
+            {!query.isLoading && vouchers.length === 0 ? <EmptyRow colSpan={7} text="Chưa có voucher." /> : null}
           </TableShell>
         </div>
       </div>
@@ -301,6 +306,11 @@ export default function AdminPromotionsPage() {
             />
             <span className="text-[11px] text-slate-500">
               Chỉ áp dụng cho voucher giảm theo %. Nhập 0 để không giới hạn.
+            </span>
+            <span className="block text-[11px] text-slate-500 mt-1">
+              {form.discountType === "percent"
+                ? `Hiện tại: ${Number(form.maxDiscountAmount) > 0 ? `tối đa ${fmtPrice(form.maxDiscountAmount)}₫` : "không giới hạn mức giảm"}`
+                : "Voucher giảm số tiền cố định nên không dùng mức giảm tối đa."}
             </span>
           </label>
           <label className="block">
