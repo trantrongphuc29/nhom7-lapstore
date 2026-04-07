@@ -5,7 +5,6 @@ const UserCartItem = require("../../models/UserCartItem");
 const AppError = require("../utils/AppError");
 const pool = require("../../config/database");
 const { ordersTableHasUserIdColumn } = require("../utils/ordersSchema.util");
-let cachedVariantHasImageColumn = null;
 
 function publicUser(row) {
   if (!row) return null;
@@ -26,26 +25,6 @@ async function getCustomerByUserId(userId) {
     [userId]
   );
   return row || null;
-}
-
-async function productVariantsHasImageColumn() {
-  if (cachedVariantHasImageColumn != null) return cachedVariantHasImageColumn;
-  try {
-    const [rows] = await pool.query(
-      `
-      SELECT 1
-      FROM information_schema.columns
-      WHERE table_schema = ANY (current_schemas(false))
-        AND table_name = 'product_variants'
-        AND column_name = 'image'
-      LIMIT 1
-      `
-    );
-    cachedVariantHasImageColumn = rows.length > 0;
-  } catch {
-    cachedVariantHasImageColumn = false;
-  }
-  return cachedVariantHasImageColumn;
 }
 
 async function getProfile(userId) {
@@ -136,8 +115,6 @@ async function deleteAddress(userId, id) {
 
 /** Trả về `status` DB: pending | accepted | delivered (giao diện khách map qua customerOrderStatus). */
 async function listOrders(userId) {
-  const hasVariantImageColumn = await productVariantsHasImageColumn();
-  const variantImageExpr = hasVariantImageColumn ? "NULLIF(TRIM(pv.image), '')" : "NULL";
   const useUserId = await ordersTableHasUserIdColumn(pool);
   const uid = Number(userId);
   const [[profile]] = await pool.query(
@@ -173,80 +150,86 @@ async function listOrders(userId) {
   whereValues.push(phoneDigits, phoneDigits);
 
   const whereByAccount = whereClauses.length > 0 ? whereClauses.join(" OR ") : "1=0";
-  const [rows] = await pool.query(
-    `
-    SELECT
-      o.id,
-      o.order_code AS orderCode,
-      o.status,
-      o.total_amount AS totalAmount,
-      o.discount_amount AS discountAmount,
-      o.payment_method AS paymentMethod,
-      o.created_at AS createdAt,
-      o.customer_name AS customerName,
-      o.shipping_address AS shippingAddress,
-      (
-        SELECT COALESCE(
-          (
-            SELECT pi.image_url
-            FROM order_items oi
-            JOIN product_images pi ON pi.product_id = oi.product_id
-            WHERE oi.order_id = o.id
-            ORDER BY pi.is_main DESC, pi.sort_order ASC, pi.id ASC
-            LIMIT 1
-          ),
-          (
-            SELECT ${variantImageExpr}
-            FROM order_items oi
-            JOIN product_variants pv ON pv.id = oi.variant_id
-            WHERE oi.order_id = o.id
-            LIMIT 1
-          )
-        )
-      ) AS image,
-      (
-        SELECT STRING_AGG(oi.product_name, ' | ')
-        FROM order_items oi
-        WHERE oi.order_id = o.id
-      ) AS productNames
-    FROM orders o
-    WHERE (${whereByAccount})
-    ORDER BY o.created_at DESC
-    `,
-    whereValues
-  );
+  let rows = [];
+  try {
+    const [primaryRows] = await pool.query(
+      `
+      SELECT
+        o.id,
+        o.order_code AS orderCode,
+        o.status,
+        o.total_amount AS totalAmount,
+        o.discount_amount AS discountAmount,
+        o.payment_method AS paymentMethod,
+        o.created_at AS createdAt,
+        o.customer_name AS customerName,
+        o.shipping_address AS shippingAddress
+      FROM orders o
+      WHERE (${whereByAccount})
+      ORDER BY o.created_at DESC
+      `,
+      whereValues
+    );
+    rows = primaryRows;
+  } catch {
+    // Fallback đơn giản nhất để tránh 500 trên schema migrate lệch cột.
+    const fallbackClauses = [];
+    const fallbackValues = [];
+    if (useUserId) {
+      fallbackClauses.push("o.user_id = ?");
+      fallbackValues.push(uid);
+    }
+    fallbackClauses.push("EXISTS (SELECT 1 FROM customers c WHERE c.id = o.customer_id AND c.user_id = ?)");
+    fallbackValues.push(uid);
+    const [fallbackRows] = await pool.query(
+      `
+      SELECT
+        o.id,
+        o.order_code AS orderCode,
+        o.status,
+        o.total_amount AS totalAmount,
+        o.discount_amount AS discountAmount,
+        o.payment_method AS paymentMethod,
+        o.created_at AS createdAt,
+        o.customer_name AS customerName,
+        o.shipping_address AS shippingAddress
+      FROM orders o
+      WHERE (${fallbackClauses.join(" OR ")})
+      ORDER BY o.created_at DESC
+      `,
+      fallbackValues
+    );
+    rows = fallbackRows;
+  }
   if (!rows.length) return rows;
 
   const orderIds = rows.map((r) => Number(r.id)).filter((id) => Number.isInteger(id) && id > 0);
+  if (!orderIds.length) return rows.map((o) => ({ ...o, items: [] }));
   const placeholders = orderIds.map(() => "?").join(",");
-  const [itemRows] = await pool.query(
-    `
-      SELECT
-        oi.order_id AS orderId,
-        oi.id,
-        oi.product_id AS productId,
-        oi.variant_id AS variantId,
-        oi.product_name AS productName,
-        oi.variant_name AS variantName,
-        oi.quantity,
-        oi.unit_price AS unitPrice,
-        COALESCE(
-          (
-            SELECT pi.image_url
-            FROM product_images pi
-            WHERE pi.product_id = oi.product_id
-            ORDER BY pi.is_main DESC, pi.sort_order ASC, pi.id ASC
-            LIMIT 1
-          ),
-          ${variantImageExpr}
-        ) AS image
-      FROM order_items oi
-      LEFT JOIN product_variants pv ON pv.id = oi.variant_id
-      WHERE oi.order_id IN (${placeholders})
-      ORDER BY oi.order_id DESC, oi.id ASC
-    `,
-    orderIds
-  );
+  let itemRows = [];
+  try {
+    const [rowsWithItems] = await pool.query(
+      `
+        SELECT
+          oi.order_id AS orderId,
+          oi.id,
+          oi.product_id AS productId,
+          oi.variant_id AS variantId,
+          oi.product_name AS productName,
+          oi.variant_name AS variantName,
+          oi.quantity,
+          oi.unit_price AS unitPrice,
+          NULL AS image
+        FROM order_items oi
+        WHERE oi.order_id IN (${placeholders})
+        ORDER BY oi.order_id DESC, oi.id ASC
+      `,
+      orderIds
+    );
+    itemRows = rowsWithItems;
+  } catch {
+    itemRows = [];
+  }
 
   const itemsByOrder = new Map();
   for (const row of itemRows) {
