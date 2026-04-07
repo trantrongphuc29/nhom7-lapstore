@@ -116,9 +116,40 @@ async function deleteAddress(userId, id) {
 /** Trả về `status` DB: pending | accepted | delivered (giao diện khách map qua customerOrderStatus). */
 async function listOrders(userId) {
   const useUserId = await ordersTableHasUserIdColumn(pool);
-  const whereByAccount = useUserId
-    ? "o.user_id = ?"
-    : "EXISTS (SELECT 1 FROM customers c WHERE c.id = o.customer_id AND c.user_id = ?)";
+  const uid = Number(userId);
+  const [[profile]] = await pool.query(
+    `
+    SELECT
+      LOWER(NULLIF(TRIM(u.email), '')) AS email,
+      COALESCE(NULLIF(TRIM(c.phone), ''), NULLIF(TRIM(u.phone), '')) AS phone
+    FROM users u
+    LEFT JOIN customers c ON c.user_id = u.id
+    WHERE u.id = ?
+    LIMIT 1
+    `,
+    [uid]
+  );
+  const email = profile?.email || null;
+  const phoneDigits = String(profile?.phone || "").replace(/\D/g, "") || null;
+
+  // Hỗ trợ dữ liệu cũ sau migrate:
+  // - Đơn mới có thể map qua orders.user_id
+  // - Đơn cũ có thể chỉ map qua orders.customer_id -> customers.user_id
+  // - Một số đơn guest cũ chỉ còn customer_email/customer_phone
+  const whereClauses = [];
+  const whereValues = [];
+  if (useUserId) {
+    whereClauses.push("o.user_id = ?");
+    whereValues.push(uid);
+  }
+  whereClauses.push("EXISTS (SELECT 1 FROM customers c WHERE c.id = o.customer_id AND c.user_id = ?)");
+  whereValues.push(uid);
+  whereClauses.push("( ? IS NOT NULL AND LOWER(NULLIF(TRIM(o.customer_email), '')) = ? )");
+  whereValues.push(email, email);
+  whereClauses.push("( ? IS NOT NULL AND REGEXP_REPLACE(COALESCE(o.customer_phone, ''), '\\D', '', 'g') = ? )");
+  whereValues.push(phoneDigits, phoneDigits);
+
+  const whereByAccount = whereClauses.length > 0 ? whereClauses.join(" OR ") : "1=0";
   const [rows] = await pool.query(
     `
     SELECT
@@ -156,10 +187,10 @@ async function listOrders(userId) {
         WHERE oi.order_id = o.id
       ) AS productNames
     FROM orders o
-    WHERE ${whereByAccount}
+    WHERE (${whereByAccount})
     ORDER BY o.created_at DESC
     `,
-    [userId]
+    whereValues
   );
   if (!rows.length) return rows;
 
