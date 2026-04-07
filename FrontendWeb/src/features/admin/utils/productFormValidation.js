@@ -35,11 +35,14 @@ const SPEC_LABELS = {
   os: "Hệ điều hành",
 };
 
+/** Chỉ bắt buộc: CPU, GPU tích hợp, RAM chung, ổ cứng mặc định. Còn lại để trống = không có. */
+const REQUIRED_SPEC_KEYS = ["cpu", "gpuOnboard", "ram", "storage"];
+
 export function validateSpecsComplete(specs) {
   if (!specs || typeof specs !== "object") return "Thiếu thông số kỹ thuật";
-  for (const key of Object.keys(SPEC_LABELS)) {
+  for (const key of REQUIRED_SPEC_KEYS) {
     if (isBlank(specs[key])) {
-      return `Thông số kỹ thuật — ${SPEC_LABELS[key]} không được để trống (GPU rời có thể ghi "Không").`;
+      return `Thông số kỹ thuật — ${SPEC_LABELS[key] || key} là bắt buộc.`;
     }
   }
   return "";

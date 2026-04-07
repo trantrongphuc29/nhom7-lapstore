@@ -28,6 +28,12 @@ function toPublicImageUrl(pathOrUrl) {
   return `${BACKEND_BASE_URL}/${cleaned}`;
 }
 
+/** Giá trị thông số có nội dung (sau trim) — dùng để ẩn dòng trống trên storefront. */
+function specHasDisplayValue(v) {
+  if (v == null) return false;
+  return String(v).trim() !== "";
+}
+
 /** Trạng thái từ product_admin_meta (API) */
 const STOREFRONT_STATUS = {
   inactive: { label: 'Ngưng bán', hint: 'Sản phẩm đã ngừng kinh doanh.' },
@@ -210,56 +216,74 @@ export default function ProductDetailPage() {
   // Nhóm variants theo ram+storage (cấu hình), lấy màu từ variant
   const uniqueColors = [...new Set(variants.map(v => v.color).filter(Boolean))];
 
-  const specifications = specs ? [
-    {
-      group: 'Bộ vi xử lý & Card đồ hoạ', items: [
-        { label: 'Bộ vi xử lý', value: specs.cpu },
-        { label: 'Card đồ hoạ Onboard', value: specs.gpu_onboard },
-        { label: 'Card đồ hoạ rời', value: specs.gpu_discrete || 'Không' },
+  const specifications = specs
+    ? [
+        {
+          group: "Bộ vi xử lý & Card đồ hoạ",
+          items: [
+            { label: "Bộ vi xử lý", value: specs.cpu },
+            { label: "Card đồ hoạ Onboard", value: specs.gpu_onboard },
+            { label: "Card đồ hoạ rời", value: specs.gpu_discrete },
+          ],
+        },
+        {
+          group: "Bộ nhớ RAM & Ổ cứng",
+          items: [
+            {
+              label: "Bộ nhớ RAM",
+              value: specHasDisplayValue(variant.ram) ? variant.ram : specs.ram,
+            },
+            { label: "Hỗ trợ RAM tối đa", value: specs.ram_max },
+            {
+              label: "Ổ cứng",
+              value: specHasDisplayValue(variant.storage) ? variant.storage : specs.storage,
+            },
+            { label: "Hỗ trợ ổ cứng tối đa", value: specs.storage_max },
+          ],
+        },
+        {
+          group: "Màn hình",
+          items: [
+            { label: "Kích thước màn hình", value: specs.screen_size },
+            { label: "Độ phân giải", value: specs.screen_resolution },
+            { label: "Công nghệ màn hình", value: specs.screen_technology },
+          ],
+        },
+        {
+          group: "Cổng kết nối & Pin",
+          items: [
+            { label: "Cổng giao tiếp", value: specs.ports },
+            { label: "Pin", value: specs.battery },
+          ],
+        },
+        {
+          group: "Kích thước & Trọng lượng",
+          items: [
+            { label: "Kích thước", value: specs.dimensions },
+            { label: "Trọng lượng", value: specs.weight },
+            { label: "Chất liệu", value: specs.material },
+          ],
+        },
+        {
+          group: "Tính năng mở rộng",
+          items: [
+            { label: "Kết nối không dây", value: specs.wireless },
+            { label: "Webcam", value: specs.webcam },
+          ],
+        },
+        {
+          group: "Phần mềm",
+          items: [{ label: "Hệ điều hành", value: specs.os }],
+        },
       ]
-    },
-    {
-      group: 'Bộ nhớ RAM & Ổ cứng', items: [
-        { label: 'Bộ nhớ RAM', value: variant.ram || specs.ram },
-        { label: 'Hỗ trợ RAM tối đa', value: specs.ram_max },
-        { label: 'Ổ cứng', value: variant.storage || specs.storage },
-        { label: 'Hỗ trợ ổ cứng tối đa', value: specs.storage_max },
-      ]
-    },
-    {
-      group: 'Màn hình', items: [
-        { label: 'Kích thước màn hình', value: specs.screen_size },
-        { label: 'Độ phân giải', value: specs.screen_resolution },
-        { label: 'Công nghệ màn hình', value: specs.screen_technology },
-      ]
-    },
-    {
-      group: 'Cổng kết nối & Pin', items: [
-        { label: 'Cổng giao tiếp', value: specs.ports },
-        { label: 'Pin', value: specs.battery },
-      ]
-    },
-    {
-      group: 'Kích thước & Trọng lượng', items: [
-        { label: 'Kích thước', value: specs.dimensions },
-        { label: 'Trọng lượng', value: specs.weight },
-        { label: 'Chất liệu', value: specs.material },
-      ]
-    },
-    {
-      group: 'Tính năng mở rộng', items: [
-        { label: 'Kết nối không dây', value: specs.wireless },
-        { label: 'Webcam', value: specs.webcam },
-      ]
-    },
-    {
-      group: 'Phần mềm', items: [
-        { label: 'Hệ điều hành', value: specs.os },
-      ]
-    },
-  ] : [];
+        .map((g) => ({
+          ...g,
+          items: g.items.filter((row) => specHasDisplayValue(row.value)),
+        }))
+        .filter((g) => g.items.length > 0)
+    : [];
 
-  const allSpecRows = specifications.flatMap(g => g.items);
+  const allSpecRows = specifications.flatMap((g) => g.items);
   const visibleRows = allSpecRows.slice(0, 8);
 
   return (
@@ -543,7 +567,7 @@ export default function ProductDetailPage() {
                         <td className="max-w-[40%] py-2.5 pr-3 align-top font-semibold text-slate-900">
                           {row.label}
                         </td>
-                        <td className="py-2.5 font-medium text-slate-800">{row.value || "—"}</td>
+                        <td className="py-2.5 font-medium text-slate-800">{String(row.value).trim()}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -600,7 +624,7 @@ export default function ProductDetailPage() {
                                 <td className="w-[42%] md:w-[40%] py-2.5 pr-3 text-slate-500 align-top break-words">
                                   {row.label}
                                 </td>
-                                <td className="py-2.5 text-slate-900 break-words">{row.value || "—"}</td>
+                                <td className="py-2.5 text-slate-900 break-words">{String(row.value).trim()}</td>
                               </tr>
                             ))}
                           </tbody>
