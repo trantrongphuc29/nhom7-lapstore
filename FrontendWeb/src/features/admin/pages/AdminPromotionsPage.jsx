@@ -40,6 +40,7 @@ function voucherToForm(v) {
     discountType: v.discountType === "fixed" ? "fixed" : "percent",
     discountValue: Number(v.discountValue) || 0,
     minOrderValue: Number(v.minOrderValue) || 0,
+    maxDiscountAmount: v.maxDiscountAmount != null ? Number(v.maxDiscountAmount) : 0,
     usageLimit: Number(v.usageLimit) || 0,
     startsAt: toDatetimeLocal(v.startsAt),
     endsAt: toDatetimeLocal(v.endsAt),
@@ -48,7 +49,10 @@ function voucherToForm(v) {
 }
 
 function discountLabel(v) {
-  if (v.discountType === "percent") return `${Number(v.discountValue)}%`;
+  if (v.discountType === "percent") {
+    const cap = v.maxDiscountAmount != null && Number(v.maxDiscountAmount) > 0 ? ` (tối đa ${fmtPrice(v.maxDiscountAmount)}₫)` : "";
+    return `${Number(v.discountValue)}%${cap}`;
+  }
   return `${fmtPrice(v.discountValue)}₫`;
 }
 
@@ -57,6 +61,7 @@ const initialForm = () => ({
   discountType: "percent",
   discountValue: 10,
   minOrderValue: 0,
+  maxDiscountAmount: 0,
   usageLimit: 100,
   startsAt: "",
   endsAt: "",
@@ -123,6 +128,8 @@ export default function AdminPromotionsPage() {
     discountType: form.discountType,
     discountValue: Number(form.discountValue),
     minOrderValue: Math.max(0, Number(form.minOrderValue) || 0),
+    maxDiscountAmount:
+      form.discountType === "percent" ? Math.max(0, Number(form.maxDiscountAmount) || 0) || null : null,
     usageLimit: Math.max(0, Number(form.usageLimit) || 0),
     startsAt: localDatetimeToMysql(form.startsAt),
     endsAt: localDatetimeToMysql(form.endsAt),
@@ -280,6 +287,21 @@ export default function AdminPromotionsPage() {
               onChange={(e) => setForm((f) => ({ ...f, minOrderValue: Number(e.target.value || 0) }))}
             />
             <span className="text-[11px] text-slate-500">Tạm tính giỏ phải đạt mức này mới áp dụng được mã.</span>
+          </label>
+          <label className="block">
+            <span className="text-slate-600 font-medium">Giảm tối đa (₫)</span>
+            <input
+              type="number"
+              min={0}
+              step={1000}
+              disabled={form.discountType !== "percent"}
+              className="mt-1 w-full border border-slate-200 rounded-lg px-3 py-2 tabular-nums disabled:bg-slate-100 disabled:text-slate-400"
+              value={form.maxDiscountAmount}
+              onChange={(e) => setForm((f) => ({ ...f, maxDiscountAmount: Number(e.target.value || 0) }))}
+            />
+            <span className="text-[11px] text-slate-500">
+              Chỉ áp dụng cho voucher giảm theo %. Nhập 0 để không giới hạn.
+            </span>
           </label>
           <label className="block">
             <span className="text-slate-600 font-medium">Giới hạn lượt dùng</span>

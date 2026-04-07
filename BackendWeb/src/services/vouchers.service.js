@@ -1,5 +1,6 @@
 const pool = require("../../config/database");
 const AppError = require("../utils/AppError");
+const { ensureVouchersMaxDiscountAmountColumn, vouchersTableHasMaxDiscountAmount } = require("../utils/voucherSchema.util");
 
 function normalizeCode(raw) {
   return String(raw || "")
@@ -24,6 +25,10 @@ function computeDiscountAmount(row, subtotal) {
     amount = Math.floor((s * val) / 100);
   } else {
     amount = Math.floor(val);
+  }
+  const maxDiscountAmount = Number(row.max_discount_amount);
+  if (Number.isFinite(maxDiscountAmount) && maxDiscountAmount > 0) {
+    amount = Math.min(amount, Math.floor(maxDiscountAmount));
   }
   amount = Math.min(Math.max(0, amount), s);
   return { ok: true, discountAmount: amount };
@@ -65,11 +70,16 @@ function assertRowApplicable(row, subtotal) {
 
 async function getVoucherRowByCode(codeNormalized) {
   if (!codeNormalized) return null;
-  const [[row]] = await pool.query(`SELECT * FROM vouchers WHERE code = ? LIMIT 1`, [codeNormalized]);
+  const hasCapColumn = await vouchersTableHasMaxDiscountAmount(pool);
+  const sql = hasCapColumn
+    ? `SELECT * FROM vouchers WHERE code = ? LIMIT 1`
+    : `SELECT *, NULL AS max_discount_amount FROM vouchers WHERE code = ? LIMIT 1`;
+  const [[row]] = await pool.query(sql, [codeNormalized]);
   return row || null;
 }
 
 async function previewVoucher(rawCode, subtotal) {
+  await ensureVouchersMaxDiscountAmountColumn(pool);
   const c = normalizeCode(rawCode);
   if (!c) throw new AppError("Vui lòng nhập mã voucher.", 400, "VALIDATION_ERROR");
   const sub = Number(subtotal);
@@ -81,6 +91,7 @@ async function previewVoucher(rawCode, subtotal) {
   return {
     code: row.code,
     discountAmount,
+    maxDiscountAmount: row.max_discount_amount != null ? Number(row.max_discount_amount) : null,
     discountType: row.discount_type,
     discountValue: Number(row.discount_value),
     minOrderValue: Number(row.min_order_value || 0),
@@ -92,6 +103,7 @@ async function previewVoucher(rawCode, subtotal) {
  */
 async function redeemVoucher(rawCode, subtotal, queryFn) {
   const run = typeof queryFn === "function" ? queryFn : (sql, params) => pool.query(sql, params);
+  await ensureVouchersMaxDiscountAmountColumn(pool);
   const c = normalizeCode(rawCode);
   if (!c) throw new AppError("Vui lòng nhập mã voucher.", 400, "VALIDATION_ERROR");
   const sub = Number(subtotal);
@@ -120,6 +132,7 @@ async function redeemVoucher(rawCode, subtotal, queryFn) {
   return {
     code: row.code,
     discountAmount,
+    maxDiscountAmount: row.max_discount_amount != null ? Number(row.max_discount_amount) : null,
     discountType: row.discount_type,
     discountValue: Number(row.discount_value),
     minOrderValue: Number(row.min_order_value || 0),

@@ -2,6 +2,7 @@ const pool = require("../../config/database");
 const AppError = require("../utils/AppError");
 const { createAuditLog } = require("./adminAudit.service");
 const { normalizeCode: normalizeVoucherCode } = require("./vouchers.service");
+const { ensureVouchersMaxDiscountAmountColumn, vouchersTableHasMaxDiscountAmount } = require("../utils/voucherSchema.util");
 
 function isPgSchemaError(error) {
   const code = String(error?.code || "");
@@ -35,14 +36,21 @@ function normalizeVoucherPayload(payload) {
   }
   const minOrderValue = Number(payload.minOrderValue || 0);
   const usageLimit = Number(payload.usageLimit || 0);
+  const maxDiscountRaw = payload.maxDiscountAmount;
+  const maxDiscountAmount =
+    maxDiscountRaw == null || maxDiscountRaw === "" ? null : Number(maxDiscountRaw);
   if (!Number.isFinite(minOrderValue) || minOrderValue < 0 || !Number.isFinite(usageLimit) || usageLimit < 0) {
     throw new AppError("minOrderValue and usageLimit must be non-negative numbers", 400, "VALIDATION_ERROR");
+  }
+  if (maxDiscountAmount != null && (!Number.isFinite(maxDiscountAmount) || maxDiscountAmount < 0)) {
+    throw new AppError("maxDiscountAmount must be a non-negative number", 400, "VALIDATION_ERROR");
   }
   return {
     code,
     discountType: payload.discountType,
     discountValue,
     minOrderValue,
+    maxDiscountAmount: maxDiscountAmount != null ? Math.floor(maxDiscountAmount) : null,
     usageLimit,
     startsAt: payload.startsAt || null,
     endsAt: payload.endsAt || null,
@@ -51,9 +59,12 @@ function normalizeVoucherPayload(payload) {
 }
 
 async function getPromotionsOverview() {
+  await ensureVouchersMaxDiscountAmountColumn(pool);
+  const hasCapColumn = await vouchersTableHasMaxDiscountAmount(pool);
+  const capSelect = hasCapColumn ? "max_discount_amount AS maxDiscountAmount" : "NULL AS maxDiscountAmount";
   const vouchers = await safeQuery(
     `
-      SELECT id, code, discount_type AS discountType, discount_value AS discountValue, min_order_value AS minOrderValue, usage_limit AS usageLimit, used_count AS usedCount, starts_at AS startsAt, ends_at AS endsAt, is_active AS isActive
+      SELECT id, code, discount_type AS discountType, discount_value AS discountValue, min_order_value AS minOrderValue, ${capSelect}, usage_limit AS usageLimit, used_count AS usedCount, starts_at AS startsAt, ends_at AS endsAt, is_active AS isActive
       FROM vouchers
       ORDER BY id DESC
       LIMIT 100
@@ -65,18 +76,20 @@ async function getPromotionsOverview() {
 }
 
 async function createVoucher(payload, actorId = null) {
+  await ensureVouchersMaxDiscountAmountColumn(pool);
   const v = normalizeVoucherPayload(payload);
 
   const [result] = await pool.query(
     `
-      INSERT INTO vouchers (code, discount_type, discount_value, min_order_value, usage_limit, starts_at, ends_at, is_active)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO vouchers (code, discount_type, discount_value, min_order_value, max_discount_amount, usage_limit, starts_at, ends_at, is_active)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     [
       v.code,
       v.discountType,
       v.discountValue,
       v.minOrderValue,
+      v.maxDiscountAmount,
       v.usageLimit,
       v.startsAt,
       v.endsAt,
@@ -95,6 +108,7 @@ async function createVoucher(payload, actorId = null) {
 }
 
 async function updateVoucher(id, payload, actorId = null) {
+  await ensureVouchersMaxDiscountAmountColumn(pool);
   const vid = Number(id);
   if (!Number.isInteger(vid) || vid <= 0) throw new AppError("Invalid voucher id", 400, "VALIDATION_ERROR");
   const [[existing]] = await pool.query(`SELECT id, code FROM vouchers WHERE id = ? LIMIT 1`, [vid]);
@@ -108,7 +122,7 @@ async function updateVoucher(id, payload, actorId = null) {
   await pool.query(
     `
       UPDATE vouchers
-      SET code = ?, discount_type = ?, discount_value = ?, min_order_value = ?, usage_limit = ?,
+      SET code = ?, discount_type = ?, discount_value = ?, min_order_value = ?, max_discount_amount = ?, usage_limit = ?,
           starts_at = ?, ends_at = ?, is_active = ?
       WHERE id = ?
     `,
@@ -117,6 +131,7 @@ async function updateVoucher(id, payload, actorId = null) {
       v.discountType,
       v.discountValue,
       v.minOrderValue,
+      v.maxDiscountAmount,
       v.usageLimit,
       v.startsAt,
       v.endsAt,
