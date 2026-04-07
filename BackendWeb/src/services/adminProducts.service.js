@@ -117,34 +117,50 @@ function assertDistinctVariantSkusInPayload(variants) {
 }
 
 function mapMysqlDuplicateToAppError(error) {
-  if (error?.code !== "ER_DUP_ENTRY") return null;
-  const msg = String(error.sqlMessage || error.message || "");
-  const detail = String(error.detail || "");
-  const constraint = String(error.constraint || "");
-  const hay = `${msg} ${detail} ${constraint}`.toLowerCase();
-  if (hay.includes("product_variants") && hay.includes("sku")) {
-    return new AppError("SKU phiên bản trùng với bản ghi khác — đổi mã phiên bản", 409, "SKU_CONFLICT");
+  const code = String(error?.code || "");
+  if (code !== "ER_DUP_ENTRY" && code !== "23505") return null;
+
+  const constraint = String(error.constraint || "").toLowerCase();
+  const msg = String(error.sqlMessage || error.message || "").toLowerCase();
+  const detail = String(error.detail || "").toLowerCase();
+  const hay = `${constraint} ${msg} ${detail}`;
+
+  if (constraint === "product_admin_meta_sku_key" || (hay.includes("product_admin_meta") && hay.includes("sku"))) {
+    return new AppError("SKU thông tin chung đã được sản phẩm khác sử dụng — hãy đổi mã SKU nhóm.", 409, "SKU_CONFLICT");
   }
-  if (hay.includes("product_admin_meta") && hay.includes("sku")) {
-    return new AppError("SKU sản phẩm (thông tin chung) đã tồn tại", 409, "SKU_CONFLICT");
+  if (constraint === "product_admin_meta_slug_key" || (hay.includes("product_admin_meta") && hay.includes("slug"))) {
+    return new AppError("Slug URL đã được sản phẩm khác sử dụng — hãy đổi slug khác.", 409, "SLUG_CONFLICT");
   }
-  if (hay.includes("product_admin_meta") && hay.includes("slug")) {
-    return new AppError("Slug đã tồn tại trên sản phẩm khác", 409, "SLUG_CONFLICT");
+  if (
+    constraint === "product_variants_sku_key" ||
+    hay.includes("product_variants_sku") ||
+    (hay.includes("product_variants") && hay.includes("sku"))
+  ) {
+    return new AppError("SKU phiên bản trùng với bản ghi khác — đổi mã SKU phiên bản.", 409, "SKU_CONFLICT");
   }
-  if (hay.includes("brands_pkey") || (hay.includes("brands") && hay.includes("pkey"))) {
+  if (constraint === "product_specs_product_id_key" || hay.includes("product_specs_product_id")) {
+    return new AppError("Sản phẩm đã có bản ghi thông số kỹ thuật — thử lưu lại hoặc liên hệ quản trị.", 409, "CONFLICT");
+  }
+  if (constraint === "brands_pkey" || (hay.includes("brands") && hay.includes("pkey"))) {
     return new AppError(
       "Không thể tạo thương hiệu (lỗi id trùng). Hãy thử lại; nếu vẫn lỗi, cần đồng bộ sequence trên database.",
       409,
       "CONFLICT"
     );
   }
-  if (hay.includes("brands")) {
+  if (constraint === "brands_name_key" || constraint === "brands_slug_key" || (hay.includes("brands") && (hay.includes("name") || hay.includes("slug")))) {
     return new AppError("Thương hiệu trùng tên hoặc slug trong hệ thống", 409, "CONFLICT");
   }
   if (msg.includes("uk_product_variants_sku") || msg.includes("product_variants.sku")) {
     return new AppError("SKU phiên bản trùng với bản ghi khác — đổi mã phiên bản", 409, "SKU_CONFLICT");
   }
-  return new AppError("SKU thông tin chung hoặc slug đã tồn tại", 409, "CONFLICT");
+
+  const human = String(error.detail || error.sqlMessage || error.message || "").trim();
+  return new AppError(
+    human ? `Dữ liệu trùng khóa duy nhất: ${human}` : "Dữ liệu trùng khóa duy nhất — kiểm tra SKU/slug hoặc thông tin trùng khác.",
+    409,
+    "CONFLICT"
+  );
 }
 
 function normalizeCategoryId(raw) {

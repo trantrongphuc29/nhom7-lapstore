@@ -85,7 +85,9 @@ function bindQuestionParams(sql, params = []) {
 function mapPgError(err) {
   if (err && err.code === "23505") {
     err.code = "ER_DUP_ENTRY";
-    err.sqlMessage = err.detail || err.message;
+    const detail = String(err.detail || "").trim();
+    const constraint = String(err.constraint || "").trim();
+    err.sqlMessage = [detail || err.message, constraint ? `constraint=${constraint}` : ""].filter(Boolean).join(" ");
   }
   return err;
 }
