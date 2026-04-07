@@ -141,6 +141,18 @@ function mapMysqlDuplicateToAppError(error) {
   if (constraint === "product_specs_product_id_key" || hay.includes("product_specs_product_id")) {
     return new AppError("Sản phẩm đã có bản ghi thông số kỹ thuật — thử lưu lại hoặc liên hệ quản trị.", 409, "CONFLICT");
   }
+  if (
+    constraint === "product_specs_pkey" ||
+    constraint === "product_images_pkey" ||
+    constraint === "product_variants_pkey" ||
+    constraint === "products_pkey"
+  ) {
+    return new AppError(
+      "Lỗi id tự tăng (sequence) trên database không khớp dữ liệu — đã có bản vá tự đồng bộ khi lưu; hãy deploy bản mới hoặc chạy SQL setval cho sequence tương ứng.",
+      409,
+      "CONFLICT"
+    );
+  }
   if (constraint === "brands_pkey" || (hay.includes("brands") && hay.includes("pkey"))) {
     return new AppError(
       "Không thể tạo thương hiệu (lỗi id trùng). Hãy thử lại; nếu vẫn lỗi, cần đồng bộ sequence trên database.",
@@ -196,6 +208,7 @@ async function resolveBrandId(conn, brandName) {
 async function saveProductImages(conn, productId, images) {
   const imgs = Array.isArray(images) ? images.map((x) => (typeof x === "string" ? x.trim() : "")).filter(Boolean) : [];
   if (imgs.length === 0) return;
+  await syncSerialSequenceToMax(conn, "product_images", "id");
   await conn.query("DELETE FROM product_images WHERE product_id = ?", [productId]);
   for (let i = 0; i < imgs.length; i += 1) {
     await conn.query(
@@ -486,6 +499,7 @@ async function persistVariants(conn, productId, variantsInput, role) {
   const settings = await adminSettingsService.getPricingSettings();
   const variants = Array.isArray(variantsInput) ? variantsInput : [];
   assertDistinctVariantSkusInPayload(variants);
+  await syncSerialSequenceToMax(conn, "product_variants", "id");
   for (const variant of variants) {
     await persistOneVariant(conn, productId, variant, settings, role || "admin");
   }
@@ -502,6 +516,7 @@ async function createAdminProduct(payload, actorRole = "admin", actorId = null) 
     const categoryId = normalizeCategoryId(payload.categoryId);
     const brandId = await resolveBrandId(conn, brand);
 
+    await syncSerialSequenceToMax(conn, "products", "id");
     const [insertProduct] = await conn.query(
       "INSERT INTO products (name, brand, description) VALUES (?, ?, ?)",
       [name, brand, payload.shortDescription ?? payload.description ?? null]
