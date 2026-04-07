@@ -5,6 +5,7 @@ const UserCartItem = require("../../models/UserCartItem");
 const AppError = require("../utils/AppError");
 const pool = require("../../config/database");
 const { ordersTableHasUserIdColumn } = require("../utils/ordersSchema.util");
+let cachedVariantHasImageColumn = null;
 
 function publicUser(row) {
   if (!row) return null;
@@ -25,6 +26,26 @@ async function getCustomerByUserId(userId) {
     [userId]
   );
   return row || null;
+}
+
+async function productVariantsHasImageColumn() {
+  if (cachedVariantHasImageColumn != null) return cachedVariantHasImageColumn;
+  try {
+    const [rows] = await pool.query(
+      `
+      SELECT 1
+      FROM information_schema.columns
+      WHERE table_schema = ANY (current_schemas(false))
+        AND table_name = 'product_variants'
+        AND column_name = 'image'
+      LIMIT 1
+      `
+    );
+    cachedVariantHasImageColumn = rows.length > 0;
+  } catch {
+    cachedVariantHasImageColumn = false;
+  }
+  return cachedVariantHasImageColumn;
 }
 
 async function getProfile(userId) {
@@ -115,6 +136,8 @@ async function deleteAddress(userId, id) {
 
 /** Trả về `status` DB: pending | accepted | delivered (giao diện khách map qua customerOrderStatus). */
 async function listOrders(userId) {
+  const hasVariantImageColumn = await productVariantsHasImageColumn();
+  const variantImageExpr = hasVariantImageColumn ? "NULLIF(TRIM(pv.image), '')" : "NULL";
   const useUserId = await ordersTableHasUserIdColumn(pool);
   const uid = Number(userId);
   const [[profile]] = await pool.query(
@@ -173,7 +196,7 @@ async function listOrders(userId) {
             LIMIT 1
           ),
           (
-            SELECT NULLIF(TRIM(pv.image), '')
+            SELECT ${variantImageExpr}
             FROM order_items oi
             JOIN product_variants pv ON pv.id = oi.variant_id
             WHERE oi.order_id = o.id
@@ -215,7 +238,7 @@ async function listOrders(userId) {
             ORDER BY pi.is_main DESC, pi.sort_order ASC, pi.id ASC
             LIMIT 1
           ),
-          NULLIF(TRIM(pv.image), '')
+          ${variantImageExpr}
         ) AS image
       FROM order_items oi
       LEFT JOIN product_variants pv ON pv.id = oi.variant_id

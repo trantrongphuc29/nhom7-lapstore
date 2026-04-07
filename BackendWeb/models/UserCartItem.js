@@ -1,4 +1,5 @@
 const pool = require("../config/database");
+let cachedVariantHasImageColumn = null;
 
 function parseSnapshot(raw) {
   if (raw == null) return {};
@@ -11,6 +12,26 @@ function parseSnapshot(raw) {
 }
 
 class UserCartItem {
+  static async productVariantsHasImageColumn() {
+    if (cachedVariantHasImageColumn != null) return cachedVariantHasImageColumn;
+    try {
+      const [rows] = await pool.query(
+        `
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = ANY (current_schemas(false))
+          AND table_name = 'product_variants'
+          AND column_name = 'image'
+        LIMIT 1
+        `
+      );
+      cachedVariantHasImageColumn = rows.length > 0;
+    } catch {
+      cachedVariantHasImageColumn = false;
+    }
+    return cachedVariantHasImageColumn;
+  }
+
   static rowToLine(row) {
     const snap = parseSnapshot(row.snapshot);
     const pid = Number(row.product_id);
@@ -31,6 +52,8 @@ class UserCartItem {
   }
 
   static async listByUserId(userId) {
+    const hasVariantImageColumn = await this.productVariantsHasImageColumn();
+    const variantImageExpr = hasVariantImageColumn ? "NULLIF(TRIM(pv.image), '')" : "NULL";
     const [rows] = await pool.query(
       `
       SELECT
@@ -44,7 +67,7 @@ class UserCartItem {
            WHERE pi.product_id = uci.product_id
            ORDER BY pi.is_main DESC, pi.sort_order ASC, pi.id ASC
            LIMIT 1),
-          NULLIF(TRIM(pv.image), '')
+          ${variantImageExpr}
         ) AS fallback_image
       FROM user_cart_items uci
       LEFT JOIN product_variants pv ON pv.id = uci.variant_id
